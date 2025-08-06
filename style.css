@@ -111,8 +111,9 @@ button:hover {
   gap: 1rem;
   padding: 0.5rem 1rem;
 }
-.poop-icon {
+.poopIcon {
   font-size: 2rem;
+  margin-right: 10px;
 }
 #poopAmount {
   font-size: 1.5rem;
@@ -121,10 +122,6 @@ button:hover {
   grid-area: main;
   padding: 1rem;
   overflow: auto;
-}
-#poopIcon {
-  font-size: 32px;
-  margin-right: 10px;
 }
 /* side panels */
 #poop-side-panel {

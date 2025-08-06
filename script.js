@@ -15,7 +15,9 @@ const ownedAPoopers = new Array(aPoopers.length).fill(0);
 
 // ─── Element refs ────────────────────────────────────
 const poopAmount         = document.getElementById("poopAmount");
-const poopIcon           = document.getElementsByClassName("poopIcon");
+const poopIcon           = document.querySelector(".poopIcon");
+const basePoopIconSize   = parseFloat(getComputedStyle(poopIcon).fontSize);
+const maxPoopForIconSize = 300000; // cap growth at 300k poop
 const defecateButton     = document.getElementById("defecatebutton");
 const spacesDisplay      = document.getElementById("spaces");
 const aPooperCostDisplay = document.getElementById("aPooperCost");
@@ -219,7 +221,10 @@ function updateUI() {
   const pps = getPoopPerSecond();
   document.getElementById('poopPerSecond').textContent =
     `Poop/sec: ${formatNumber(pps)}`;
-  //poopIcon.style.fontSize = `${32 + points/100}px`;//
+  // Grow the poop icon up to 10× its base size at 300k poop
+  const growthProgress = Math.min(points, maxPoopForIconSize) / maxPoopForIconSize;
+  const newIconSize = basePoopIconSize * (1 + growthProgress * 9);
+  poopIcon.style.fontSize = `${newIconSize}px`;
   getUnlockedSpaces();
   const slots = document.querySelectorAll('#spaces-grid .space-item');
   slots.forEach((slot, i) => {
