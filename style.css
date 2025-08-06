@@ -1,0 +1,232 @@
+body {
+  background-color: #f3e9d2;
+  font-family: 'Comic Sans MS', sans-serif;
+  color: #4e3629; /* poop brown */
+  text-align: center;
+  padding-top: 10px;
+}
+
+button {
+  background-color: #7b5e57;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem; 
+  font-size: 0.85rem;       
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #5c443d;
+}
+
+
+/* layout */
+#game-container {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  font-family: sans-serif;
+}
+
+#main-tabs {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem;
+  gap: 0.25rem; 
+}
+#main-tabs .tab-btn {
+  flex: auto;              
+  padding: 0.4rem 0.8rem;   /* top/bottom 0.4rem, left/right 0.8rem */
+  font-size: 0.85rem;       /* shrink the text */
+  border-radius: 0.25rem;   /* round the corners a bit smaller */
+}
+
+/*.tab-btn {
+  flex: 1;
+  padding: 0.75rem;
+  background: #333;
+  color: #eee;
+  border: none;
+  cursor: pointer;
+}*/
+.tab-btn.active {
+  background: #555;
+}
+#tabs-content {
+  display: flex;
+  flex: 1;
+}
+
+.tab-panel {
+  flex: 1;
+  display: flex;
+  position: relative;
+}
+
+.hidden {
+  display: none;
+}
+/* Poop tab panels */
+#tab-poop {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  grid-template-rows:
+    auto     /* poop progress bar (poop-header) */
+    auto     /* poop icon + amount (poop-info) */
+    1fr;     /* spaces grid + side panel */
+  grid-template-areas:
+    "header side"
+    "info   side"
+    "main   side";
+  gap: 0;
+  overflow: visible;
+}
+.poop-header {
+  grid-area: header;
+  padding: 1rem;
+}
+#poop-progress-container {
+  width: 100%;
+  height: 16px;
+  background: #ccc;
+  border-radius: 8px;
+  overflow: hidden;
+}
+#poop-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #4caf50;
+  transition: width 0.3s ease;
+}
+/* main + sidebar */
+/* Poop info */
+.poop-info {
+  grid-area: info;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+}
+.poop-icon {
+  font-size: 2rem;
+}
+#poopAmount {
+  font-size: 1.5rem;
+}
+.poop-main {
+  grid-area: main;
+  padding: 1rem;
+  overflow: auto;
+}
+#poopIcon {
+  font-size: 32px;
+  margin-right: 10px;
+}
+/* side panels */
+#poop-side-panel {
+  grid-area: side;
+  grid-template-rows:
+  auto    /* poop progress bar (poop-header) */
+  auto     /* poop icon + amount (poop-info) */
+  1fr;     /* spaces grid + side panel */
+  grid-template-areas:
+  "currencies""
+  "poopers""
+  "upgrades";
+  background: #b4a98d;
+  padding: 1rem;
+  overflow: auto;
+  border-left: thick double #4d382d;  /* thick poop-brown bar */
+  /*padding-left: calc(1rem + 8px);  /* shift content over so it’s not on top */
+}
+
+#currencies-panel { /* resource icons + amounts */
+  grid-area: currencies;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 8px solid #4e3629;  /* thick poop-brown bar */
+  padding-bottom: calc(1rem + 8px);  /* shift content over so it’s not on top */
+} 
+
+#poopers-panel {
+  grid-area: poopers;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 8px solid #4e3629;  /* thick poop-brown bar */
+  padding-bottom: calc(1rem + 8px);  /* shift content over so it’s not on top */
+  } 
+
+#upgrades-panel {
+  grid-area: upgrades;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  } 
+
+
+/* Spaces grid */
+#spaces {
+  color: #666;
+}
+#spaces-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 0.5rem;
+}
+.space-item {
+  display: flex;
+  flex-direction: column;      /* stack children vertically */
+  align-items: center;         /* center horizontally */
+  justify-content: center;     /* center vertically */
+  width: 64px; height: 64px;   /* adjust slot size */
+  margin: 0.5rem;
+  border: 2px dashed #aaa;     /* empty slot outline */
+  position: relative;
+}
+.space-item button {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.space-item button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.toilet-icon {
+  font-size: 1.5rem;            /* size of the 🚽 emoji */
+  margin-bottom: 0.25rem;       /* space between icon and button */
+  pointer-events: none;         /* clicks go through to the button */
+}
+#building-menu {
+  position: absolute;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  z-index: 1000;
+}
+#building-menu button {
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;    /* less padding */
+  font-size: 0.75rem;         /* smaller text */
+  border-radius: 0.2rem;      /* slightly smaller corners */
+  min-width: auto;
+  background: #3d2e2e;
+}
+#building-menu button:hover {
+  background: #5a4444;
+}

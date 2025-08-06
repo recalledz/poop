@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>My Idle Game</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body>
+  <div id="game-container">
+    <!-- Tabs -->
+    <nav id="main-tabs">
+      <button class="tab-btn active" data-tab="poop">Poop</button>
+      <button class="tab-btn" data-tab="tree">Poop Tree</button>
+      <button class="tab-btn" data-tab="rebirth">Rebirth</button>
+      <button class="tab-btn" data-tab="lab">Methane Lab</button>
+      <button class="tab-btn" data-tab="combat">Combat</button>
+      <button class="tab-btn" data-tab="terraform">Terraform</button>
+    </nav>
+
+    <!-- Tab Content -->
+    <section id="tabs-content">
+      
+      <!-- Poop Tab -->
+      <div id="tab-poop" class="tab-panel">
+        
+        <!-- A.a: progress bar toward 10^15 -->
+        <div class="poop-header">
+          <div id="poop-progress-container">
+            <div id="poop-progress-bar"></div>
+          </div>
+        </div>
+
+        <!-- poop main poop counter + defecate button -->
+        <div class="poop-info">
+          <h2>poop:</h2>
+          <p class="poop"></p>
+            <div class="poopIcon">💩</div>
+            <div id="poopAmount">0</div>
+            <div id="poopPerSecond">poop/second: 0</div>
+          <button id="defecatebutton">defecate</button>
+        </div>
+  
+        <!-- main grid -->
+        <div class="poop-main">
+          <div id="spaces-grid">
+          </div>
+        </div>
+        <!-- A.h: side panel -->
+        <aside id="poop-side-panel">
+          <div id="currencies-panel">
+            <!-- resource icons + amounts -->
+          </div>
+          <div id="poopers-panel">
+            <!-- list of pooper types + available/total + buy button -->
+          </div>
+          <div id="upgrades-panel">
+            <!-- upgrade icons (locked until milestones) -->
+          </div>
+        </aside>
+      </div>
+      <!-- Other tabs will go here -->
+      <div id="tab-tree" class="tab-panel hidden"></div>
+      <div id="tab-rebirth" class="tab-panel hidden"></div>
+      <div id="tab-lab" class="tab-panel hidden"></div>
+      <div id="tab-combat" class="tab-panel hidden"></div>
+      <div id="tab-terraform" class="tab-panel hidden"></div>
+    </section>
+    
+    <!-- Building menu (hidden by default) -->
+    <div id="building-menu" class="hidden">
+      <button data-building="toilet">Toilet</button>
+      <!-- later: <button data-building="gold-mine">Gold Mine</button>, etc -->
+    </div>
+  </div>
+</body>
+<script src="script.js"></script>
+
+</html>
