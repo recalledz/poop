@@ -168,7 +168,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const countSpan = document.getElementById(`pooper-count-${idx}`);
     const buyButton = document.getElementById(`buy-pooper-${idx}`);
-    buyButton.addEventListener('click', () => { buyPooper(idx)
+    buyButton.addEventListener('click', () => {
+      buyPooper(idx);
       console.log(`Clicked Buy for ${template.name} (index=${idx})`);
     });
   });
@@ -283,5 +284,4 @@ setInterval(() => {
     }
   });
   updateUI();
-},
- 1000)
+}, 1000);
