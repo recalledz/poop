@@ -46,6 +46,15 @@ const POOPER_STATE_DURATIONS = {
 
 const TICK_INTERVAL_MS = 1000;
 
+const POOPER_STATE_LABELS = {
+  [STATE_IDLE]: "Idle",
+  [STATE_EATING]: "Eating",
+  [STATE_DIGESTING]: "Digesting",
+  [STATE_LOOKING_FOR_SPOT]: "Looking for Spot",
+  [STATE_WAITING_FOR_SPOT]: "Waiting for Spot",
+  [STATE_POOPING]: "Pooping",
+};
+
 const upgrades = [
   {
     id: "upgrade1",
@@ -109,6 +118,8 @@ const spacesDisplay      = document.getElementById("spaces");
 const aPooperCostDisplay = document.getElementById("aPooperCost");
 const poopPerSecondDisplay = document.getElementById("poopPerSecond");
 const upgradesPanel      = document.getElementById("upgrades-panel");
+
+let pooperListContainer = null;
 
 
 //-------------------Spot grid------------------------
@@ -216,27 +227,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const poopersPanel = document.getElementById('poopers-panel');
-  aPoopers.forEach((template, idx) => {
-    const row = document.createElement('div');
-    row.className = 'pooper-row';
-    row.innerHTML = `
-      <span>${template.name}:</span>
-      <span id="pooper-count-${idx}">0</span>
-      <button id="buy-pooper-${idx}">
-        Buy (${formatNumber(averagePooperCost)})
-      </button>
-    `;
-    poopersPanel.appendChild(row);
+  const pooperHireSection = document.getElementById('pooper-hiring');
+  pooperListContainer = document.getElementById('pooper-list-body');
 
-    const buyButton = document.getElementById(`buy-pooper-${idx}`);
-    buyButton.addEventListener('click', () => {
-      buyPooper(idx);
-      console.log(`Clicked Buy for ${template.name} (index=${idx})`);
+  if (pooperHireSection) {
+    aPoopers.forEach((template, idx) => {
+      const row = document.createElement('div');
+      row.className = 'pooper-row';
+      row.innerHTML = `
+        <span>${template.name}:</span>
+        <span id="pooper-count-${idx}">0</span>
+        <button id="buy-pooper-${idx}">
+          Buy (${formatNumber(averagePooperCost)})
+        </button>
+      `;
+      pooperHireSection.appendChild(row);
+
+      const buyButton = document.getElementById(`buy-pooper-${idx}`);
+      buyButton.addEventListener('click', () => {
+        buyPooper(idx);
+        console.log(`Clicked Buy for ${template.name} (index=${idx})`);
+      });
+
+      updatePooperCountDisplay(idx);
     });
-
-    updatePooperCountDisplay(idx);
-  });
+  }
 
   updateUI();
 });
@@ -260,6 +275,116 @@ function updatePooperCountDisplay(typeId) {
   if (countSpan) {
     countSpan.textContent = getAvailablePooperCount(typeId);
   }
+}
+
+function getPooperStateLabel(state) {
+  if (POOPER_STATE_LABELS[state]) {
+    return POOPER_STATE_LABELS[state];
+  }
+
+  return state
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function getPooperProgressInfo(pooper) {
+  const duration = POOPER_STATE_DURATIONS[pooper.state];
+  if (typeof duration === 'number' && duration > 0) {
+    const rawRemaining =
+      typeof pooper.stateTimer === 'number'
+        ? pooper.stateTimer
+        : duration;
+    const remaining = Math.max(0, Math.min(duration, rawRemaining));
+    const completed = duration - remaining;
+    const percent = Math.max(0, Math.min(100, (completed / duration) * 100));
+    const secondsLeft = remaining / 1000;
+    const decimals = secondsLeft >= 10 ? 0 : 1;
+
+    return {
+      percent,
+      text: `${secondsLeft.toFixed(decimals)}s left`,
+    };
+  }
+
+  if (pooper.state === STATE_LOOKING_FOR_SPOT) {
+    return { percent: 0, text: 'Searching…' };
+  }
+
+  if (pooper.state === STATE_IDLE) {
+    return { percent: 0, text: 'Ready' };
+  }
+
+  return { percent: 0, text: '' };
+}
+
+function renderPooperList() {
+  if (!pooperListContainer) {
+    return;
+  }
+
+  if (poopers.length === 0) {
+    pooperListContainer.innerHTML = '<p class="pooper-list-empty">Hire a pooper to kick things off.</p>';
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  poopers.forEach((pooper) => {
+    const card = document.createElement('article');
+    card.className = 'pooper-card';
+    card.setAttribute('role', 'listitem');
+
+    const header = document.createElement('div');
+    header.className = 'pooper-card-header';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'pooper-name';
+    const template = aPoopers[pooper.typeId];
+    const baseName = template ? template.name : 'Pooper';
+    nameEl.textContent = `${baseName} #${pooper.id}`;
+
+    const stateEl = document.createElement('span');
+    stateEl.className = 'pooper-state';
+    const stateLabel = getPooperStateLabel(pooper.state);
+    stateEl.textContent = stateLabel;
+
+    header.append(nameEl, stateEl);
+
+    const progressWrapper = document.createElement('div');
+    progressWrapper.className = 'pooper-progress-wrapper';
+
+    const progressBar = document.createElement('div');
+    progressBar.className = 'pooper-progress-bar';
+    progressBar.setAttribute('role', 'progressbar');
+    progressBar.setAttribute('aria-valuemin', '0');
+    progressBar.setAttribute('aria-valuemax', '100');
+    progressBar.setAttribute('aria-label', `${stateLabel} progress`);
+
+    const progressFill = document.createElement('div');
+    progressFill.className = 'pooper-progress-fill';
+
+    const progressInfo = getPooperProgressInfo(pooper);
+    const percent = Math.round(progressInfo.percent);
+    progressFill.style.width = `${progressInfo.percent}%`;
+    progressBar.setAttribute('aria-valuenow', String(percent));
+
+    progressBar.appendChild(progressFill);
+    progressWrapper.appendChild(progressBar);
+
+    if (progressInfo.text) {
+      const progressLabel = document.createElement('span');
+      progressLabel.className = 'pooper-progress-label';
+      progressLabel.textContent = progressInfo.text;
+      progressWrapper.appendChild(progressLabel);
+    }
+
+    card.append(header, progressWrapper);
+    fragment.appendChild(card);
+  });
+
+  pooperListContainer.innerHTML = '';
+  pooperListContainer.appendChild(fragment);
 }
 
 function getSpotType(typeId) {
@@ -333,7 +458,8 @@ function updateSpotDisplay(index, slotElement) {
 
   info.innerHTML = `
     <strong>${spot.name}</strong>
-    <div>Capacity: ${spot.occupants.size}/${spot.capacity}</div>
+    <div class="spot-capacity">Capacity: ${spot.capacity}</div>
+    <div class="spot-occupants">Occupants: ${spot.occupants.size} / ${spot.capacity}</div>
     <div>Multiplier: x${spot.multiplier.toFixed(2)}</div>
   `;
 
@@ -622,6 +748,7 @@ function updateUI() {
   aPoopers.forEach((_, idx) => updatePooperCountDisplay(idx));
   updateProgressBar(totalPoints, 1e15);
   renderUpgrades();
+  renderPooperList();
 
 }
 

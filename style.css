@@ -141,6 +141,16 @@ button:hover {
   /*padding-left: calc(1rem + 8px);  /* shift content over so it’s not on top */
 }
 
+.spot-capacity,
+.spot-occupants {
+  font-size: 0.85rem;
+}
+
+.spot-occupants {
+  font-weight: 700;
+  color: #2f2119;
+}
+
 #currencies-panel { /* resource icons + amounts */
   grid-area: currencies;
   display: flex;
@@ -159,7 +169,114 @@ button:hover {
   margin-bottom: 1rem;
   border-bottom: 8px solid #4e3629;  /* thick poop-brown bar */
   padding-bottom: calc(1rem + 8px);  /* shift content over so it’s not on top */
-  } 
+}
+
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.panel-heading {
+  margin: 0;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pooper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #d9c7a1;
+  border: 1px solid #4e3629;
+  border-radius: 0.5rem;
+}
+
+.pooper-row span:first-child {
+  font-weight: bold;
+}
+
+#pooper-list-section {
+  max-height: 320px;
+}
+
+.pooper-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+  max-height: 260px;
+  padding-right: 0.25rem;
+}
+
+.pooper-list-empty {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.pooper-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  background: #f0e1be;
+  border: 1px solid #4e3629;
+  border-radius: 0.5rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.pooper-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.pooper-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.pooper-state {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.45rem;
+  background: #7b5e57;
+  color: #fff;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pooper-progress-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pooper-progress-bar {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: rgba(78, 54, 41, 0.25);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.pooper-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7b5e57, #4e3629);
+  width: 0%;
+  transition: width 0.2s linear;
+}
+
+.pooper-progress-label {
+  font-size: 0.75rem;
+  text-align: right;
+}
 
 #upgrades-panel {
   grid-area: upgrades;
