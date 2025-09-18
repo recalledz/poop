@@ -167,7 +167,42 @@ button:hover {
   flex-direction: column;
   gap: 0.5rem;
   margin-bottom: 1rem;
-  } 
+  }
+
+.upgrade-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: #d9c7a1;
+  border: 2px solid #4e3629;
+  border-radius: 0.5rem;
+  text-align: left;
+}
+
+.upgrade-card.locked {
+  opacity: 0.6;
+}
+
+.upgrade-card.purchased {
+  opacity: 0.75;
+}
+
+.upgrade-card h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.upgrade-card p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.upgrade-card button {
+  margin-top: 0.5rem;
+  align-self: stretch;
+}
 
 
 /* Spaces grid */
