@@ -496,14 +496,75 @@ function getUnlockedSpaces() {
   return initialUnlocked + thresholdsPassed;
 }
 
+function getPooperSpotMultiplier(pooper) {
+  if (pooper.currentSpotIndex != null) {
+    const spot = spots[pooper.currentSpotIndex];
+    if (spot && typeof spot.multiplier === "number") {
+      return spot.multiplier;
+    }
+  }
+  if (typeof pooper.activeMultiplier === "number") {
+    return pooper.activeMultiplier;
+  }
+  return 1;
+}
+
+function getPooperUpgradeMultiplier(pooper) {
+  return upgrades.reduce((multiplier, upgrade) => {
+    if (!upgrade.isPurchased) {
+      return multiplier;
+    }
+
+    if (typeof upgrade.getPooperOutputMultiplier === "function") {
+      const value = upgrade.getPooperOutputMultiplier(pooper);
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return multiplier * value;
+      }
+    }
+
+    const staticMultiplier =
+      typeof upgrade.pooperOutputMultiplier === "number"
+        ? upgrade.pooperOutputMultiplier
+        : typeof upgrade.outputMultiplier === "number"
+          ? upgrade.outputMultiplier
+          : null;
+
+    if (staticMultiplier != null && Number.isFinite(staticMultiplier)) {
+      return multiplier * staticMultiplier;
+    }
+
+    return multiplier;
+  }, 1);
+}
+
+function calculatePooperCompletionReward(pooper) {
+  const baseOutput = Number(pooper.baseOutput) || 0;
+  if (baseOutput <= 0) {
+    return 0;
+  }
+
+  const spotMultiplier = getPooperSpotMultiplier(pooper);
+  const upgradeMultiplier = getPooperUpgradeMultiplier(pooper);
+  return baseOutput * spotMultiplier * upgradeMultiplier;
+}
+
 function getPoopPerSecond() {
   const activeRate = poopers.reduce((sum, pooper) => {
     if (pooper.state !== STATE_POOPING) {
       return sum;
     }
-    const multiplier = pooper.activeMultiplier ?? 1;
-    return sum + pooper.baseOutput * multiplier;
+
+    const completionReward = calculatePooperCompletionReward(pooper);
+    const poopingDurationSeconds =
+      (POOPER_STATE_DURATIONS[STATE_POOPING] ?? 1000) / 1000;
+
+    if (poopingDurationSeconds <= 0) {
+      return sum;
+    }
+
+    return sum + completionReward / poopingDurationSeconds;
   }, 0);
+
   return activeRate + passivePoopPerSecond;
 }
 //--------------Update UI function-------------//
@@ -634,14 +695,13 @@ function tickPooper(pooper, deltaMs) {
   }
 
   if (pooper.state === STATE_POOPING) {
-    const multiplier = pooper.activeMultiplier ?? 1;
-    const produced = pooper.baseOutput * multiplier * (deltaMs / 1000);
-    points += produced;
-    totalPoints += produced;
-
     pooper.stateTimer -= deltaMs;
     if (pooper.stateTimer <= 0) {
-      releaseSpotOccupancy(pooper);
+      const reward = calculatePooperCompletionReward(pooper);
+      if (reward > 0) {
+        points += reward;
+        totalPoints += reward;
+      }
       advancePooperState(pooper);
     }
     return;
