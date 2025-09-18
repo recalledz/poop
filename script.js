@@ -7,7 +7,7 @@ const spaceThresholds = [20, 100, 1000, 100000, 1000000, 100000000, 1000000000, 
 const maxSpaces = spaceThresholds.length;
 let toilets =  new Array(maxSpaces).fill(null);
 let averagePooperCost = 10;
-let initialUnlocked = 0
+let initialUnlocked = 1
 const aPoopers = [
   { name: "Average Pooper", rate: 1 }  // rate = poop/sec
 ];
@@ -72,6 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
     item.appendChild(btn);
     spacesGrid.appendChild(item);
   }
+
+  updateUI();
 
   // 2) Clicking anywhere else hides the menu
   document.addEventListener('click', () => {
