@@ -17,6 +17,29 @@ const aPoopers = [
 let poopers = [];
 let nextPooperId = 1;
 
+const STATE_IDLE = "idle";
+const STATE_EATING = "eating";
+const STATE_DIGESTING = "digesting";
+const STATE_LOOKING_FOR_SPOT = "looking_for_spot";
+const STATE_WAITING_FOR_SPOT = "waiting_for_spot";
+const STATE_POOPING = "pooping";
+
+const POOPER_STATE_SEQUENCE = [
+  STATE_EATING,
+  STATE_DIGESTING,
+  STATE_LOOKING_FOR_SPOT,
+  STATE_POOPING,
+];
+
+const POOPER_STATE_DURATIONS = {
+  [STATE_EATING]: 5000,
+  [STATE_DIGESTING]: 4000,
+  [STATE_WAITING_FOR_SPOT]: 2000,
+  [STATE_POOPING]: 2000,
+};
+
+const TICK_INTERVAL_MS = 1000;
+
 const upgrades = [
   {
     id: "upgrade1",
@@ -146,7 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 4) The helper that safely updates the right space-item
   function purchaseBuilding(spaceIndex, type) {
-    toilets[spaceIndex - 1] = { pooper: null };
+    toilets[spaceIndex - 1] = {
+      assignedPooperId: null,
+      currentPooperId: null,
+    };
     const items = spacesGrid.querySelectorAll('.space-item');
     if (!spaceIndex || spaceIndex < 1 || spaceIndex > items.length) {
       console.error('Invalid spaceIndex:', spaceIndex);
@@ -185,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function assignPooperToToilet(spaceIndex) {
     // a) Check inventory
     const availablePooper = poopers.find(
-      (pooper) => pooper.typeId === 0 && pooper.state === 'idle'
+      (pooper) => pooper.typeId === 0 && pooper.state === STATE_IDLE
     );
 
     if (!availablePooper) {
@@ -194,17 +220,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // b) Mark the pooper as assigned & update sidebar
-    availablePooper.state = 'assigned';
-    availablePooper.assignedTo = spaceIndex;
-    updatePooperCountDisplay(0);
-
-    // c) Assign in state
     const slot = toilets[spaceIndex - 1];
     if (!slot) {
       console.error('No toilet built at slot', spaceIndex);
       return;
     }
-    slot.pooper = availablePooper;
+
+    slot.assignedPooperId = availablePooper.id;
+    availablePooper.assignedTo = spaceIndex;
+    availablePooper.currentToiletIndex = null;
+    setPooperState(availablePooper, STATE_EATING);
+    updatePooperCountDisplay(0);
 
     // d) Disable the Assign button in the UI
     const btn = spacesGrid
@@ -253,7 +279,7 @@ function formatNumber(n) {
 
 function getAvailablePooperCount(typeId) {
   return poopers.filter(
-    (pooper) => pooper.typeId === typeId && pooper.state === 'idle'
+    (pooper) => pooper.typeId === typeId && pooper.state === STATE_IDLE
   ).length;
 }
 
@@ -355,10 +381,10 @@ function getUnlockedSpaces() {
 }
 
 function getPoopPerSecond() {
-  const assignedRate = toilets.reduce((sum, slot) => {
-    return sum + (slot && slot.pooper ? slot.pooper.baseOutput : 0);
+  const activeRate = poopers.reduce((sum, pooper) => {
+    return sum + (pooper.state === STATE_POOPING ? pooper.baseOutput : 0);
   }, 0);
-  return assignedRate + passivePoopPerSecond;
+  return activeRate + passivePoopPerSecond;
 }
 //--------------Update UI function-------------//
 function updateUI() {
@@ -431,8 +457,11 @@ function buyPooper(idx) {
   const newPooper = {
     id: nextPooperId++,
     typeId: idx,
-    state: 'idle',
+    state: STATE_IDLE,
+    stateTimer: 0,
     progress: 0,
+    assignedTo: null,
+    currentToiletIndex: null,
     baseOutput: template.rate,
   };
   poopers.push(newPooper);
@@ -444,18 +473,145 @@ function buyPooper(idx) {
   updateUI();
 }
 
-// Idle loop: each toilet with a pooper adds its rate every second
-setInterval(() => {
-  toilets.forEach(slot => {
-    if (slot && slot.pooper) {
-      points += slot.pooper.baseOutput;
-      totalPoints += slot.pooper.baseOutput;
-    }
-  });
-  if (passivePoopPerSecond > 0) {
-    points += passivePoopPerSecond;
-    totalPoints += passivePoopPerSecond;
+function tickPoopers(deltaMs) {
+  poopers.forEach((pooper) => tickPooper(pooper, deltaMs));
+}
+
+function tickPooper(pooper, deltaMs) {
+  if (pooper.state === STATE_IDLE) {
+    return;
   }
+
+  if (pooper.state === STATE_LOOKING_FOR_SPOT) {
+    attemptToOccupyToilet(pooper);
+    return;
+  }
+
+  if (pooper.state === STATE_WAITING_FOR_SPOT) {
+    pooper.stateTimer = Math.max(
+      0,
+      (pooper.stateTimer ?? POOPER_STATE_DURATIONS[STATE_WAITING_FOR_SPOT]) - deltaMs,
+    );
+
+    if (pooper.stateTimer <= 0) {
+      setPooperState(pooper, STATE_LOOKING_FOR_SPOT);
+    }
+    return;
+  }
+
+  if (pooper.state === STATE_POOPING) {
+    const produced = pooper.baseOutput * (deltaMs / 1000);
+    points += produced;
+    totalPoints += produced;
+
+    pooper.stateTimer -= deltaMs;
+    if (pooper.stateTimer <= 0) {
+      releaseToilet(pooper);
+      advancePooperState(pooper);
+    }
+    return;
+  }
+
+  if (pooper.stateTimer == null) {
+    pooper.stateTimer = POOPER_STATE_DURATIONS[pooper.state] ?? 0;
+  }
+
+  pooper.stateTimer -= deltaMs;
+  if (pooper.stateTimer <= 0) {
+    advancePooperState(pooper);
+  }
+}
+
+function advancePooperState(pooper) {
+  const currentIndex = POOPER_STATE_SEQUENCE.indexOf(pooper.state);
+  const nextIndex = currentIndex === -1
+    ? 0
+    : (currentIndex + 1) % POOPER_STATE_SEQUENCE.length;
+  const nextState = POOPER_STATE_SEQUENCE[nextIndex];
+  setPooperState(pooper, nextState);
+}
+
+function setPooperState(pooper, nextState) {
+  pooper.state = nextState;
+
+  switch (nextState) {
+    case STATE_LOOKING_FOR_SPOT:
+      attemptToOccupyToilet(pooper);
+      break;
+    case STATE_WAITING_FOR_SPOT:
+      pooper.stateTimer = POOPER_STATE_DURATIONS[STATE_WAITING_FOR_SPOT];
+      break;
+    case STATE_POOPING:
+      pooper.stateTimer = POOPER_STATE_DURATIONS[STATE_POOPING];
+      break;
+    default:
+      pooper.stateTimer = POOPER_STATE_DURATIONS[nextState] ?? 0;
+      break;
+  }
+}
+
+function attemptToOccupyToilet(pooper) {
+  const slotIndex = findAvailableToiletIndex(pooper);
+
+  if (slotIndex === null) {
+    setPooperState(pooper, STATE_WAITING_FOR_SPOT);
+    return;
+  }
+
+  const slot = toilets[slotIndex];
+  if (!slot) {
+    setPooperState(pooper, STATE_WAITING_FOR_SPOT);
+    return;
+  }
+
+  slot.currentPooperId = pooper.id;
+  pooper.currentToiletIndex = slotIndex;
+  pooper.state = STATE_POOPING;
+  pooper.stateTimer = POOPER_STATE_DURATIONS[STATE_POOPING];
+}
+
+function findAvailableToiletIndex(pooper) {
+  const preferredIndex = pooper.assignedTo != null ? pooper.assignedTo - 1 : null;
+
+  if (
+    preferredIndex != null &&
+    toilets[preferredIndex] &&
+    !toilets[preferredIndex].currentPooperId
+  ) {
+    return preferredIndex;
+  }
+
+  for (let i = 0; i < toilets.length; i++) {
+    const slot = toilets[i];
+    if (slot && !slot.currentPooperId) {
+      return i;
+    }
+  }
+
+  return null;
+}
+
+function releaseToilet(pooper) {
+  if (pooper.currentToiletIndex == null) {
+    return;
+  }
+
+  const slot = toilets[pooper.currentToiletIndex];
+  if (slot && slot.currentPooperId === pooper.id) {
+    slot.currentPooperId = null;
+  }
+
+  pooper.currentToiletIndex = null;
+}
+
+setInterval(() => {
+  tickPoopers(TICK_INTERVAL_MS);
+
+  if (passivePoopPerSecond > 0) {
+    const passiveGain = passivePoopPerSecond * (TICK_INTERVAL_MS / 1000);
+    points += passiveGain;
+    totalPoints += passiveGain;
+  }
+
   updateUI();
-},
- 1000);
+}, TICK_INTERVAL_MS);
