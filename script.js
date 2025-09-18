@@ -264,16 +264,33 @@ function formatNumber(n) {
   return n;
 }
 
-function getAvailablePooperCount(typeId) {
-  return poopers.filter(
-    (pooper) => pooper.typeId === typeId && pooper.state === STATE_IDLE
-  ).length;
+function getPooperCounts(typeId) {
+  return poopers.reduce(
+    (counts, pooper) => {
+      if (pooper.typeId !== typeId) {
+        return counts;
+      }
+
+      counts.total += 1;
+
+      if (pooper.state === STATE_IDLE) {
+        counts.available += 1;
+      } else {
+        counts.busy += 1;
+      }
+
+      return counts;
+    },
+    { total: 0, available: 0, busy: 0 }
+  );
 }
 
 function updatePooperCountDisplay(typeId) {
   const countSpan = document.getElementById(`pooper-count-${typeId}`);
   if (countSpan) {
-    countSpan.textContent = getAvailablePooperCount(typeId);
+    const { total, available, busy } = getPooperCounts(typeId);
+    countSpan.textContent = total;
+    countSpan.title = `Total: ${total}\nAvailable: ${available}\nBusy: ${busy}`;
   }
 }
 
@@ -789,7 +806,6 @@ function buyPooper(idx) {
 
   // 4) update both side‐panel and main UI
   setPooperState(newPooper, STATE_EATING);
-  updatePooperCountDisplay(idx);
   document.getElementById(`buy-pooper-${idx}`)
           .textContent = `Buy (${formatNumber(averagePooperCost)})`;
   updateUI();
@@ -875,6 +891,8 @@ function setPooperState(pooper, nextState) {
       pooper.stateTimer = POOPER_STATE_DURATIONS[nextState] ?? 0;
       break;
   }
+
+  updatePooperCountDisplay(pooper.typeId);
 }
 
 setInterval(() => {
