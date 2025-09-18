@@ -13,7 +13,9 @@ let initialUnlocked = 0;
 const aPoopers = [
   { name: "Average Pooper", rate: 1 }  // rate = poop/sec
 ];
-const ownedAPoopers = new Array(aPoopers.length).fill(0);
+
+let poopers = [];
+let nextPooperId = 1;
 
 const upgrades = [
   {
@@ -45,6 +47,11 @@ const upgrades = [
     cost: 2500,
     effect: () => {
       aPoopers[0].rate += 2;
+      poopers.forEach(pooper => {
+        if (pooper.typeId === 0) {
+          pooper.baseOutput += 2;
+        }
+      });
     },
     isUnlocked: () => totalPoints >= 1000,
     isPurchased: false,
@@ -177,14 +184,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // 5) Assign a pooper to the toilet
   function assignPooperToToilet(spaceIndex) {
     // a) Check inventory
-    if (ownedAPoopers[0] < 1) {
+    const availablePooper = poopers.find(
+      (pooper) => pooper.typeId === 0 && pooper.state === 'idle'
+    );
+
+    if (!availablePooper) {
       alert('No poopers available!');
       return;
     }
 
-    // b) Decrement your inventory & update sidebar
-    ownedAPoopers[0]--;
-    document.getElementById('pooper-count-0').textContent = ownedAPoopers[0];
+    // b) Mark the pooper as assigned & update sidebar
+    availablePooper.state = 'assigned';
+    availablePooper.assignedTo = spaceIndex;
+    updatePooperCountDisplay(0);
 
     // c) Assign in state
     const slot = toilets[spaceIndex - 1];
@@ -192,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('No toilet built at slot', spaceIndex);
       return;
     }
-    slot.pooper = aPoopers[0];
+    slot.pooper = availablePooper;
 
     // d) Disable the Assign button in the UI
     const btn = spacesGrid
@@ -219,12 +231,13 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     poopersPanel.appendChild(row);
 
-    const countSpan = document.getElementById(`pooper-count-${idx}`);
     const buyButton = document.getElementById(`buy-pooper-${idx}`);
     buyButton.addEventListener('click', () => {
       buyPooper(idx);
       console.log(`Clicked Buy for ${template.name} (index=${idx})`);
     });
+
+    updatePooperCountDisplay(idx);
   });
 
   updateUI();
@@ -236,6 +249,19 @@ function formatNumber(n) {
   if (n >= 1e6) return (n/1e6).toFixed(2) + "M";
   if (n >= 1e3) return (n/1e3).toFixed(2) + "K";
   return n;
+}
+
+function getAvailablePooperCount(typeId) {
+  return poopers.filter(
+    (pooper) => pooper.typeId === typeId && pooper.state === 'idle'
+  ).length;
+}
+
+function updatePooperCountDisplay(typeId) {
+  const countSpan = document.getElementById(`pooper-count-${typeId}`);
+  if (countSpan) {
+    countSpan.textContent = getAvailablePooperCount(typeId);
+  }
 }
 
 function renderUpgrades() {
@@ -330,7 +356,7 @@ function getUnlockedSpaces() {
 
 function getPoopPerSecond() {
   const assignedRate = toilets.reduce((sum, slot) => {
-    return sum + (slot && slot.pooper ? slot.pooper.rate : 0);
+    return sum + (slot && slot.pooper ? slot.pooper.baseOutput : 0);
   }, 0);
   return assignedRate + passivePoopPerSecond;
 }
@@ -373,6 +399,7 @@ function updateUI() {
       btn.disabled    = false;
     }
   });
+  aPoopers.forEach((_, idx) => updatePooperCountDisplay(idx));
   updateProgressBar(totalPoints, 1e15);
   renderUpgrades();
 
@@ -399,12 +426,19 @@ function buyPooper(idx) {
   points -= averagePooperCost;
   averagePooperCost = Math.ceil(averagePooperCost * 1.1);
 
-  // 3) increment your inventory
-  ownedAPoopers[idx]++;
+  // 3) create a new pooper and store it
+  const template = aPoopers[idx];
+  const newPooper = {
+    id: nextPooperId++,
+    typeId: idx,
+    state: 'idle',
+    progress: 0,
+    baseOutput: template.rate,
+  };
+  poopers.push(newPooper);
 
   // 4) update both side‐panel and main UI
-  document.getElementById(`pooper-count-${idx}`)
-          .textContent = ownedAPoopers[idx];
+  updatePooperCountDisplay(idx);
   document.getElementById(`buy-pooper-${idx}`)
           .textContent = `Buy (${formatNumber(averagePooperCost)})`;
   updateUI();
@@ -414,8 +448,8 @@ function buyPooper(idx) {
 setInterval(() => {
   toilets.forEach(slot => {
     if (slot && slot.pooper) {
-      points += slot.pooper.rate;
-      totalPoints += slot.pooper.rate;
+      points += slot.pooper.baseOutput;
+      totalPoints += slot.pooper.baseOutput;
     }
   });
   if (passivePoopPerSecond > 0) {
