@@ -2,16 +2,66 @@
 
 // ─── State ─────────────────────────────────────────────
 let points = 0;
-let totalPoints = 0
+let totalPoints = 0;
+let poopPerClick = 100;
+let passivePoopPerSecond = 0;
 const spaceThresholds = [20, 100, 1000, 100000, 1000000, 100000000, 1000000000, 10000000000, 100000000000];
 const maxSpaces = spaceThresholds.length;
 let toilets =  new Array(maxSpaces).fill(null);
 let averagePooperCost = 10;
-let initialUnlocked = 0
+let initialUnlocked = 0;
 const aPoopers = [
   { name: "Average Pooper", rate: 1 }  // rate = poop/sec
 ];
 const ownedAPoopers = new Array(aPoopers.length).fill(0);
+
+const upgrades = [
+  {
+    id: "upgrade1",
+    name: "Poop Scooper",
+    description: "Make every defecate click more productive.",
+    cost: 100,
+    effect: () => {
+      poopPerClick += 50;
+    },
+    isUnlocked: () => totalPoints >= 50,
+    isPurchased: false,
+  },
+  {
+    id: "upgrade2",
+    name: "Composting Bin",
+    description: "Generates a slow passive stream of poop.",
+    cost: 500,
+    effect: () => {
+      passivePoopPerSecond += 1;
+    },
+    isUnlocked: () => totalPoints >= 250,
+    isPurchased: false,
+  },
+  {
+    id: "upgrade3",
+    name: "Super Poop Vacuum",
+    description: "Supercharge your workers' output.",
+    cost: 2500,
+    effect: () => {
+      aPoopers[0].rate += 2;
+    },
+    isUnlocked: () => totalPoints >= 1000,
+    isPurchased: false,
+  },
+  {
+    id: "upgrade4",
+    name: "Advanced Composting System",
+    description: "Massively increases passive generation and lowers hiring costs.",
+    cost: 10000,
+    effect: () => {
+      passivePoopPerSecond += 5;
+      averagePooperCost = Math.max(5, Math.floor(averagePooperCost * 0.9));
+    },
+    isUnlocked: () => totalPoints >= 5000,
+    isPurchased: false,
+  },
+];
 
 // ─── Element refs ────────────────────────────────────
 const poopAmount         = document.getElementById("poopAmount");
@@ -21,7 +71,8 @@ const maxPoopForIconSize = 300000; // cap growth at 300k poop
 const defecateButton     = document.getElementById("defecatebutton");
 const spacesDisplay      = document.getElementById("spaces");
 const aPooperCostDisplay = document.getElementById("aPooperCost");
-const poopPerSecondDisplay = document.getElementById("poopPerSecond")
+const poopPerSecondDisplay = document.getElementById("poopPerSecond");
+const upgradesPanel      = document.getElementById("upgrades-panel");
 
 
 //-------------------Toilet grid------------------------
@@ -170,10 +221,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const countSpan = document.getElementById(`pooper-count-${idx}`);
     const buyButton = document.getElementById(`buy-pooper-${idx}`);
-    buyButton.addEventListener('click', () => { buyPooper(idx)
+    buyButton.addEventListener('click', () => {
+      buyPooper(idx);
       console.log(`Clicked Buy for ${template.name} (index=${idx})`);
     });
   });
+
+  updateUI();
 });
 
 // ─── functions ─────────────────────────────────────────
@@ -182,6 +236,77 @@ function formatNumber(n) {
   if (n >= 1e6) return (n/1e6).toFixed(2) + "M";
   if (n >= 1e3) return (n/1e3).toFixed(2) + "K";
   return n;
+}
+
+function renderUpgrades() {
+  if (!upgradesPanel) return;
+
+  upgradesPanel.innerHTML = "";
+
+  upgrades.forEach((upgrade) => {
+    const card = document.createElement("div");
+    card.className = "upgrade-card";
+
+    if (upgrade.isPurchased) {
+      card.classList.add("purchased");
+    }
+
+    if (!upgrade.isUnlocked()) {
+      card.classList.add("locked");
+    }
+
+    const title = document.createElement("h4");
+    title.textContent = upgrade.name;
+
+    const description = document.createElement("p");
+    description.className = "upgrade-description";
+    description.textContent = upgrade.description;
+
+    const cost = document.createElement("p");
+    cost.className = "upgrade-cost";
+    cost.textContent = `Cost: ${formatNumber(upgrade.cost)}`;
+
+    const status = document.createElement("p");
+    status.className = "upgrade-status";
+    if (upgrade.isPurchased) {
+      status.textContent = "Purchased";
+    } else if (!upgrade.isUnlocked()) {
+      status.textContent = "Locked";
+    } else if (points < upgrade.cost) {
+      status.textContent = "Need more poop";
+    } else {
+      status.textContent = "Ready to purchase";
+    }
+
+    const button = document.createElement("button");
+    button.type = "button";
+
+    if (upgrade.isPurchased) {
+      button.textContent = "Purchased";
+      button.disabled = true;
+    } else if (!upgrade.isUnlocked()) {
+      button.textContent = "Locked";
+      button.disabled = true;
+    } else {
+      button.textContent = `Buy (${formatNumber(upgrade.cost)})`;
+      button.disabled = points < upgrade.cost;
+      button.addEventListener("click", () => purchaseUpgrade(upgrade));
+    }
+
+    card.append(title, description, cost, status, button);
+    upgradesPanel.appendChild(card);
+  });
+}
+
+function purchaseUpgrade(upgrade) {
+  if (upgrade.isPurchased) return;
+  if (!upgrade.isUnlocked()) return;
+  if (points < upgrade.cost) return;
+
+  points -= upgrade.cost;
+  upgrade.isPurchased = true;
+  upgrade.effect();
+  updateUI();
 }
 
 function updateProgressBar(current, max) {
@@ -204,9 +329,10 @@ function getUnlockedSpaces() {
 }
 
 function getPoopPerSecond() {
-  return toilets.reduce((sum, slot) => {
+  const assignedRate = toilets.reduce((sum, slot) => {
     return sum + (slot && slot.pooper ? slot.pooper.rate : 0);
   }, 0);
+  return assignedRate + passivePoopPerSecond;
 }
 //--------------Update UI function-------------//
 function updateUI() {
@@ -219,13 +345,17 @@ function updateUI() {
   // 1) Poop counter + icon size
   poopAmount.textContent = formatNumber(points);
   const pps = getPoopPerSecond();
-  document.getElementById('poopPerSecond').textContent =
-    `Poop/sec: ${formatNumber(pps)}`;
+  poopPerSecondDisplay.textContent = `Poop/sec: ${formatNumber(pps)}`;
   // Grow the poop icon up to 10× its base size at 300k poop
   const growthProgress = Math.min(points, maxPoopForIconSize) / maxPoopForIconSize;
   const newIconSize = basePoopIconSize * (1 + growthProgress * 9);
   poopIcon.style.fontSize = `${newIconSize}px`;
-  getUnlockedSpaces();
+
+  const pooperBuyButton = document.getElementById('buy-pooper-0');
+  if (pooperBuyButton) {
+    pooperBuyButton.textContent = `Buy (${formatNumber(averagePooperCost)})`;
+  }
+
   const slots = document.querySelectorAll('#spaces-grid .space-item');
   slots.forEach((slot, i) => {
     const btn = slot.querySelector('button');
@@ -244,15 +374,16 @@ function updateUI() {
     }
   });
   updateProgressBar(totalPoints, 1e15);
-  
+  renderUpgrades();
+
 }
 
 // ─── Actions ─────────────────────────────────────────
 
 // Manual click
 defecateButton.addEventListener("click", () => {
-  points += 100;
-  totalPoints += 100;
+  points += poopPerClick;
+  totalPoints += poopPerClick;
   updateUI();
 });
 
@@ -287,6 +418,10 @@ setInterval(() => {
       totalPoints += slot.pooper.rate;
     }
   });
+  if (passivePoopPerSecond > 0) {
+    points += passivePoopPerSecond;
+    totalPoints += passivePoopPerSecond;
+  }
   updateUI();
 },
- 1000)
+ 1000);
