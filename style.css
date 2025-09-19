@@ -73,16 +73,79 @@ button:hover {
   display: grid;
   grid-template-columns: 1fr 300px;
   grid-template-rows:
+    auto     /* poop status bar */
+    auto     /* defecate button */
     auto     /* poop progress bar (poop-header) */
-    auto     /* poop icon + amount (poop-info) */
     1fr;     /* spaces grid + side panel */
   grid-template-areas:
+    "status status"
+    "button side"
     "header side"
-    "info   side"
     "main   side";
   gap: 0;
   overflow: visible;
 }
+
+#poop-status-bar {
+  grid-area: status;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #d9c7a1;
+  border-bottom: 2px solid #4e3629;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#poop-status-bar h2 {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#poop-status-bar .poop,
+#poop-status-bar #poopAmount,
+#poop-status-bar #poopPerSecond {
+  margin: 0;
+  font-weight: 600;
+}
+
+#defecatebutton-wrapper {
+  grid-area: button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  background: #f3e9d2;
+  border-bottom: 2px solid rgba(78, 54, 41, 0.2);
+}
+
+#defecatebutton {
+  padding: 0.9rem 2rem;
+  font-size: 1rem;
+  border-radius: 9999px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 640px) {
+  #poop-status-bar {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    gap: 0.5rem;
+  }
+
+  #poop-status-bar > * {
+    width: 100%;
+  }
+}
+
 .poop-header {
   grid-area: header;
   padding: 1rem;
@@ -99,17 +162,6 @@ button:hover {
   width: 0%;
   background: #4caf50;
   transition: width 0.3s ease;
-}
-/* main + sidebar */
-/* Poop info */
-.poop-info {
-  grid-area: info;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 0.5rem 1rem;
 }
 .poopIcon {
   font-size: 2rem;
