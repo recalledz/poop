@@ -29,12 +29,14 @@ const STATE_DIGESTING = "digesting";
 const STATE_LOOKING_FOR_SPOT = "looking_for_spot";
 const STATE_WAITING_FOR_SPOT = "waiting_for_spot";
 const STATE_POOPING = "pooping";
+const STATE_RESTING = "resting";
 
 const POOPER_STATE_SEQUENCE = [
   STATE_EATING,
   STATE_DIGESTING,
   STATE_LOOKING_FOR_SPOT,
   STATE_POOPING,
+  STATE_RESTING,
 ];
 
 const POOPER_STATE_DURATIONS = {
@@ -42,6 +44,7 @@ const POOPER_STATE_DURATIONS = {
   [STATE_DIGESTING]: 4000,
   [STATE_WAITING_FOR_SPOT]: 2000,
   [STATE_POOPING]: 2000,
+  [STATE_RESTING]: 3000,
 };
 
 const TICK_INTERVAL_MS = 1000;
@@ -53,6 +56,7 @@ const POOPER_STATE_LABELS = {
   [STATE_LOOKING_FOR_SPOT]: "Looking for Spot",
   [STATE_WAITING_FOR_SPOT]: "Waiting for Spot",
   [STATE_POOPING]: "Pooping",
+  [STATE_RESTING]: "Resting",
 };
 
 const upgrades = [
@@ -850,6 +854,18 @@ function tickPooper(pooper, deltaMs) {
     return;
   }
 
+  if (pooper.state === STATE_RESTING) {
+    pooper.stateTimer = Math.max(
+      0,
+      (pooper.stateTimer ?? POOPER_STATE_DURATIONS[STATE_RESTING]) - deltaMs,
+    );
+
+    if (pooper.stateTimer <= 0) {
+      advancePooperState(pooper);
+    }
+    return;
+  }
+
   if (pooper.stateTimer == null) {
     pooper.stateTimer = POOPER_STATE_DURATIONS[pooper.state] ?? 0;
   }
@@ -886,6 +902,9 @@ function setPooperState(pooper, nextState) {
       break;
     case STATE_POOPING:
       pooper.stateTimer = POOPER_STATE_DURATIONS[STATE_POOPING];
+      break;
+    case STATE_RESTING:
+      pooper.stateTimer = POOPER_STATE_DURATIONS[STATE_RESTING];
       break;
     default:
       pooper.stateTimer = POOPER_STATE_DURATIONS[nextState] ?? 0;
