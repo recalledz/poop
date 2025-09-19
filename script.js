@@ -113,6 +113,15 @@ const upgrades = [
 ];
 
 // ─── Element refs ────────────────────────────────────
+function queryAccordionPanelContent(panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) {
+    return null;
+  }
+
+  return panel.querySelector('[data-accordion-content]') || panel;
+}
+
 const poopAmount         = document.getElementById("poopAmount");
 const poopIcon           = document.querySelector(".poopIcon");
 const basePoopIconSize   = parseFloat(getComputedStyle(poopIcon).fontSize);
@@ -121,7 +130,7 @@ const defecateButton     = document.getElementById("defecatebutton");
 const spacesDisplay      = document.getElementById("spaces");
 const aPooperCostDisplay = document.getElementById("aPooperCost");
 const poopPerSecondDisplay = document.getElementById("poopPerSecond");
-const upgradesPanel      = document.getElementById("upgrades-panel");
+const upgradesPanel      = queryAccordionPanelContent("upgrades-panel");
 
 let pooperListContainer = null;
 
@@ -231,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const pooperHireSection = document.getElementById('pooper-hiring');
+  const pooperHireSection = queryAccordionPanelContent('pooper-hiring');
   pooperListContainer = document.getElementById('pooper-list-body');
 
   if (pooperHireSection) {
@@ -257,85 +266,118 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const managementSectionIds = ['pooper-hiring', 'pooper-list-section', 'upgrades-panel'];
   const mobileTabsContainer = document.getElementById('poop-mobile-tabs');
-  const mobilePanelIds = ['pooper-hiring', 'pooper-list-section', 'upgrades-panel'];
-  const mobilePanels = mobilePanelIds
+  const mobileTabButtons = mobileTabsContainer
+    ? Array.from(mobileTabsContainer.querySelectorAll('.poop-mobile-tab[data-target]'))
+    : [];
+  const accordionTriggers = Array.from(
+    document.querySelectorAll('.accordion-trigger[data-target]')
+  );
+  const managementPanels = managementSectionIds
     .map((panelId) => document.getElementById(panelId))
     .filter((panel) => panel);
+  const mobileMediaQuery = window.matchMedia('(max-width: 767px)');
 
-  if (mobileTabsContainer && mobilePanels.length) {
-    const mobileTabButtons = Array.from(
-      mobileTabsContainer.querySelectorAll('.poop-mobile-tab[data-target]')
-    );
-    const mobileMediaQuery = window.matchMedia('(max-width: 767px)');
+  let activeManagementPanelId =
+    managementPanels.find((panel) => panel.classList.contains('is-open'))?.id ||
+    managementPanels.find((panel) => panel.classList.contains('mobile-panel-active'))?.id ||
+    managementPanels[0]?.id ||
+    null;
 
-    function showAllMobilePanels() {
-      mobilePanels.forEach((panel) => {
-        panel.classList.remove('mobile-panel-active');
-        panel.removeAttribute('aria-hidden');
-        panel.removeAttribute('hidden');
-        panel.removeAttribute('tabindex');
-      });
-      mobileTabButtons.forEach((button) => {
-        button.classList.remove('active');
-        button.setAttribute('aria-selected', 'false');
-      });
+  function setActiveManagementPanel(panelId, options = {}) {
+    const { force = false, scrollIntoView = false } = options;
+
+    if (!managementPanels.length) {
+      return;
     }
 
-    function activateMobilePanel(targetId) {
-      mobilePanels.forEach((panel) => {
-        const isActive = panel.id === targetId;
-        panel.classList.toggle('mobile-panel-active', isActive);
-        panel.toggleAttribute('hidden', !isActive);
-        panel.setAttribute('aria-hidden', String(!isActive));
-        panel.setAttribute('tabindex', isActive ? '0' : '-1');
-      });
+    const requestedPanel =
+      managementPanels.find((panel) => panel.id === panelId) || managementPanels[0];
+    const nextPanelId = requestedPanel.id;
 
-      mobileTabButtons.forEach((button) => {
-        const isActive = button.dataset.target === targetId;
-        button.classList.toggle('active', isActive);
-        button.setAttribute('aria-selected', String(isActive));
-      });
+    if (!force && activeManagementPanelId === nextPanelId) {
+      return;
     }
 
-    function syncMobilePanelsForViewport() {
-      if (!mobileMediaQuery.matches) {
-        showAllMobilePanels();
+    activeManagementPanelId = nextPanelId;
+
+    managementPanels.forEach((panel) => {
+      const isActive = panel.id === nextPanelId;
+      panel.classList.toggle('is-open', isActive);
+      panel.classList.toggle('mobile-panel-active', isActive);
+      panel.setAttribute('aria-hidden', String(!isActive));
+      panel.setAttribute('tabindex', isActive ? '0' : '-1');
+
+      if (isActive) {
+        panel.removeAttribute('inert');
+      } else {
+        panel.setAttribute('inert', '');
+      }
+    });
+
+    accordionTriggers.forEach((trigger) => {
+      const isActive = trigger.dataset.target === nextPanelId;
+      trigger.classList.toggle('is-active', isActive);
+      trigger.setAttribute('aria-expanded', String(isActive));
+    });
+
+    mobileTabButtons.forEach((button) => {
+      const isActive = button.dataset.target === nextPanelId;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-selected', String(isActive));
+      button.setAttribute('tabindex', isActive ? '0' : '-1');
+    });
+
+    if (scrollIntoView && typeof requestedPanel.scrollIntoView === 'function') {
+      requestedPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  accordionTriggers.forEach((trigger) => {
+    trigger.addEventListener('click', () => {
+      const targetId = trigger.dataset.target;
+      if (!targetId) {
         return;
       }
 
-      let activeButton = mobileTabButtons.find((button) => button.classList.contains('active'));
-      if (!activeButton && mobileTabButtons.length > 0) {
-        activeButton = mobileTabButtons[0];
-        activeButton.classList.add('active');
-      }
-
-      if (activeButton) {
-        activateMobilePanel(activeButton.dataset.target);
-      }
-    }
-
-    mobileTabButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        if (!mobileMediaQuery.matches) {
-          return;
-        }
-
-        if (button.classList.contains('active')) {
-          return;
-        }
-
-        activateMobilePanel(button.dataset.target);
+      setActiveManagementPanel(targetId, {
+        scrollIntoView: mobileMediaQuery.matches,
       });
     });
+  });
 
-    if (typeof mobileMediaQuery.addEventListener === 'function') {
-      mobileMediaQuery.addEventListener('change', syncMobilePanelsForViewport);
-    } else if (typeof mobileMediaQuery.addListener === 'function') {
-      mobileMediaQuery.addListener(syncMobilePanelsForViewport);
+  mobileTabButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const targetId = button.dataset.target;
+      if (!targetId) {
+        return;
+      }
+
+      setActiveManagementPanel(targetId, {
+        scrollIntoView: mobileMediaQuery.matches,
+      });
+    });
+  });
+
+  const handleViewportChange = () => {
+    if (!activeManagementPanelId) {
+      activeManagementPanelId = managementPanels[0]?.id || null;
     }
 
-    syncMobilePanelsForViewport();
+    if (activeManagementPanelId) {
+      setActiveManagementPanel(activeManagementPanelId, { force: true });
+    }
+  };
+
+  if (typeof mobileMediaQuery.addEventListener === 'function') {
+    mobileMediaQuery.addEventListener('change', handleViewportChange);
+  } else if (typeof mobileMediaQuery.addListener === 'function') {
+    mobileMediaQuery.addListener(handleViewportChange);
+  }
+
+  if (activeManagementPanelId) {
+    setActiveManagementPanel(activeManagementPanelId, { force: true });
   }
 
   updateUI();

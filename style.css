@@ -202,6 +202,103 @@ button:hover {
   gap: 1rem;
 }
 
+#poop-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.accordion-item {
+  border-radius: 0.85rem;
+  overflow: hidden;
+  background: rgba(255, 251, 244, 0.92);
+  border: 2px solid rgba(78, 54, 41, 0.22);
+  box-shadow:
+    0 18px 35px -28px rgba(78, 54, 41, 0.6),
+    0 10px 20px -24px rgba(0, 0, 0, 0.35);
+}
+
+.accordion-header {
+  margin: 0;
+}
+
+.accordion-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(180deg, rgba(123, 94, 87, 0.95), rgba(92, 68, 61, 0.95));
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.accordion-trigger .accordion-title {
+  flex: 1;
+  text-align: left;
+}
+
+.accordion-trigger .accordion-indicator {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.accordion-trigger:hover,
+.accordion-trigger:focus-visible {
+  background: linear-gradient(180deg, rgba(92, 68, 61, 0.95), rgba(75, 55, 49, 0.95));
+}
+
+.accordion-trigger:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+}
+
+.accordion-trigger.is-active,
+.accordion-trigger[aria-expanded="true"] {
+  background: linear-gradient(180deg, rgba(92, 68, 61, 0.95), rgba(78, 54, 41, 0.95));
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.accordion-trigger.is-active .accordion-indicator,
+.accordion-trigger[aria-expanded="true"] .accordion-indicator {
+  transform: rotate(45deg);
+}
+
+.accordion-panel {
+  background: rgba(255, 251, 244, 0.95);
+  border-top: 1px solid rgba(78, 54, 41, 0.18);
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition: max-height 0.35s ease, opacity 0.3s ease;
+}
+
+.accordion-panel.is-open {
+  max-height: 1600px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.accordion-panel-content {
+  padding: 1rem 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 #poop-mobile-panels [data-mobile-panel] {
   width: 100%;
 }
@@ -225,16 +322,6 @@ button:hover {
   border-bottom: 8px solid #4e3629;  /* thick poop-brown bar */
   padding-bottom: calc(1rem + 8px);  /* shift content over so it’s not on top */
 } 
-
-#poopers-panel {
-  grid-area: poopers;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  border-bottom: 8px solid #4e3629;  /* thick poop-brown bar */
-  padding-bottom: calc(1rem + 8px);  /* shift content over so it’s not on top */
-}
 
 .panel-section {
   display: flex;
@@ -264,7 +351,7 @@ button:hover {
   font-weight: bold;
 }
 
-#pooper-list-section {
+#pooper-list-section .accordion-panel-content {
   max-height: 320px;
 }
 
@@ -345,11 +432,13 @@ button:hover {
 
 #upgrades-panel {
   grid-area: upgrades;
+}
+
+#upgrades-panel .accordion-panel-content {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  margin-bottom: 1rem;
-  }
+}
 
 .upgrade-card {
   display: flex;
@@ -436,22 +525,12 @@ button:hover {
     gap: 0.75rem;
   }
 
-  #poopers-panel {
-    border-bottom: none;
-    padding-bottom: 0;
-    margin-bottom: 0;
+  #poop-accordion {
+    gap: 0.5rem;
   }
 
-  #poop-mobile-panels [data-mobile-panel] {
-    display: none;
-  }
-
-  #poop-mobile-panels [data-mobile-panel].mobile-panel-active {
-    display: block;
-  }
-
-  #poop-mobile-panels [data-mobile-panel].mobile-panel-active.panel-section {
-    display: flex;
+  #poop-mobile-panels [data-mobile-panel] .accordion-panel-content {
+    padding: 0.75rem 1rem 1.25rem;
   }
 }
 
