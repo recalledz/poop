@@ -642,6 +642,7 @@ function renderUpgrades() {
   upgrades.forEach((upgrade) => {
     const card = document.createElement("div");
     card.className = "upgrade-card";
+    card.dataset.expanded = "false";
 
     if (upgrade.isPurchased) {
       card.classList.add("purchased");
@@ -651,16 +652,60 @@ function renderUpgrades() {
       card.classList.add("locked");
     }
 
-    const title = document.createElement("h4");
-    title.textContent = upgrade.name;
+    const summary = document.createElement("div");
+    summary.className = "upgrade-summary";
+
+    const name = document.createElement("span");
+    name.className = "upgrade-name";
+    name.textContent = upgrade.name;
+
+    const cost = document.createElement("span");
+    cost.className = "upgrade-cost";
+    cost.textContent = formatNumber(upgrade.cost);
+
+    const detailsId = `upgrade-details-${upgrade.id}`;
+    const toggleButton = document.createElement("button");
+    toggleButton.type = "button";
+    toggleButton.className = "upgrade-toggle";
+    toggleButton.setAttribute("aria-expanded", "false");
+    toggleButton.setAttribute("aria-controls", detailsId);
+    toggleButton.setAttribute("aria-label", `Show details for ${upgrade.name}`);
+    toggleButton.innerHTML = "<span aria-hidden=\"true\">▼</span>";
+
+    const toggleDetails = () => {
+      const expanded = card.dataset.expanded === "true";
+      const next = !expanded;
+      card.dataset.expanded = String(next);
+      toggleButton.setAttribute("aria-expanded", String(next));
+      toggleButton.setAttribute(
+        "aria-label",
+        next ? `Hide details for ${upgrade.name}` : `Show details for ${upgrade.name}`
+      );
+      toggleButton.innerHTML = `<span aria-hidden="true">${next ? "▲" : "▼"}</span>`;
+    };
+
+    toggleButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleDetails();
+    });
+
+    summary.addEventListener("click", (event) => {
+      if (event.target instanceof Element && event.target.closest(".upgrade-toggle")) {
+        return;
+      }
+      toggleDetails();
+    });
+
+    summary.append(name, cost, toggleButton);
+
+    const details = document.createElement("div");
+    details.className = "upgrade-details";
+    details.id = detailsId;
 
     const description = document.createElement("p");
     description.className = "upgrade-description";
     description.textContent = upgrade.description;
-
-    const cost = document.createElement("p");
-    cost.className = "upgrade-cost";
-    cost.textContent = `Cost: ${formatNumber(upgrade.cost)}`;
 
     const status = document.createElement("p");
     status.className = "upgrade-status";
@@ -686,10 +731,15 @@ function renderUpgrades() {
     } else {
       button.textContent = `Buy (${formatNumber(upgrade.cost)})`;
       button.disabled = points < upgrade.cost;
-      button.addEventListener("click", () => purchaseUpgrade(upgrade));
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        purchaseUpgrade(upgrade);
+      });
     }
 
-    card.append(title, description, cost, status, button);
+    details.append(description, status, button);
+    card.append(summary, details);
     upgradesPanel.appendChild(card);
   });
 }
