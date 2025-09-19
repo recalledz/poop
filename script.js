@@ -257,6 +257,87 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const mobileTabsContainer = document.getElementById('poop-mobile-tabs');
+  const mobilePanelIds = ['pooper-hiring', 'pooper-list-section', 'upgrades-panel'];
+  const mobilePanels = mobilePanelIds
+    .map((panelId) => document.getElementById(panelId))
+    .filter((panel) => panel);
+
+  if (mobileTabsContainer && mobilePanels.length) {
+    const mobileTabButtons = Array.from(
+      mobileTabsContainer.querySelectorAll('.poop-mobile-tab[data-target]')
+    );
+    const mobileMediaQuery = window.matchMedia('(max-width: 767px)');
+
+    function showAllMobilePanels() {
+      mobilePanels.forEach((panel) => {
+        panel.classList.remove('mobile-panel-active');
+        panel.removeAttribute('aria-hidden');
+        panel.removeAttribute('hidden');
+        panel.removeAttribute('tabindex');
+      });
+      mobileTabButtons.forEach((button) => {
+        button.classList.remove('active');
+        button.setAttribute('aria-selected', 'false');
+      });
+    }
+
+    function activateMobilePanel(targetId) {
+      mobilePanels.forEach((panel) => {
+        const isActive = panel.id === targetId;
+        panel.classList.toggle('mobile-panel-active', isActive);
+        panel.toggleAttribute('hidden', !isActive);
+        panel.setAttribute('aria-hidden', String(!isActive));
+        panel.setAttribute('tabindex', isActive ? '0' : '-1');
+      });
+
+      mobileTabButtons.forEach((button) => {
+        const isActive = button.dataset.target === targetId;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-selected', String(isActive));
+      });
+    }
+
+    function syncMobilePanelsForViewport() {
+      if (!mobileMediaQuery.matches) {
+        showAllMobilePanels();
+        return;
+      }
+
+      let activeButton = mobileTabButtons.find((button) => button.classList.contains('active'));
+      if (!activeButton && mobileTabButtons.length > 0) {
+        activeButton = mobileTabButtons[0];
+        activeButton.classList.add('active');
+      }
+
+      if (activeButton) {
+        activateMobilePanel(activeButton.dataset.target);
+      }
+    }
+
+    mobileTabButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        if (!mobileMediaQuery.matches) {
+          return;
+        }
+
+        if (button.classList.contains('active')) {
+          return;
+        }
+
+        activateMobilePanel(button.dataset.target);
+      });
+    });
+
+    if (typeof mobileMediaQuery.addEventListener === 'function') {
+      mobileMediaQuery.addEventListener('change', syncMobilePanelsForViewport);
+    } else if (typeof mobileMediaQuery.addListener === 'function') {
+      mobileMediaQuery.addListener(syncMobilePanelsForViewport);
+    }
+
+    syncMobilePanelsForViewport();
+  }
+
   updateUI();
 });
 

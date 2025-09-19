@@ -52,20 +52,74 @@
           <div id="currencies-panel">
             <!-- resource icons + amounts -->
           </div>
-          <div id="poopers-panel">
-            <div id="pooper-hiring" class="panel-section">
-              <h3 class="panel-heading">Pooper Hiring</h3>
-              <!-- list of pooper types + available/total + buy button -->
-            </div>
-            <section id="pooper-list-section" class="panel-section">
-              <h3 class="panel-heading">Pooper List</h3>
-              <div id="pooper-list-body" class="pooper-list" role="list">
-                <!-- dynamically populated -->
+          <nav id="poop-mobile-tabs" role="tablist" aria-label="Poop management panels">
+            <button
+              type="button"
+              class="poop-mobile-tab active"
+              data-target="pooper-hiring"
+              role="tab"
+              id="poop-mobile-tab-hiring"
+              aria-controls="pooper-hiring"
+              aria-selected="true"
+            >
+              Hiring
+            </button>
+            <button
+              type="button"
+              class="poop-mobile-tab"
+              data-target="pooper-list-section"
+              role="tab"
+              id="poop-mobile-tab-list"
+              aria-controls="pooper-list-section"
+              aria-selected="false"
+            >
+              Pooper List
+            </button>
+            <button
+              type="button"
+              class="poop-mobile-tab"
+              data-target="upgrades-panel"
+              role="tab"
+              id="poop-mobile-tab-upgrades"
+              aria-controls="upgrades-panel"
+              aria-selected="false"
+            >
+              Upgrades
+            </button>
+          </nav>
+          <div id="poop-mobile-panels">
+            <div id="poopers-panel">
+              <div
+                id="pooper-hiring"
+                class="panel-section mobile-panel-active"
+                data-mobile-panel
+                role="tabpanel"
+                aria-labelledby="poop-mobile-tab-hiring"
+              >
+                <h3 class="panel-heading">Pooper Hiring</h3>
+                <!-- list of pooper types + available/total + buy button -->
               </div>
-            </section>
-          </div>
-          <div id="upgrades-panel">
-            <!-- upgrade icons (locked until milestones) -->
+              <section
+                id="pooper-list-section"
+                class="panel-section"
+                data-mobile-panel
+                role="tabpanel"
+                aria-labelledby="poop-mobile-tab-list"
+              >
+                <h3 class="panel-heading">Pooper List</h3>
+                <div id="pooper-list-body" class="pooper-list" role="list">
+                  <!-- dynamically populated -->
+                </div>
+              </section>
+            </div>
+            <div
+              id="upgrades-panel"
+              data-mobile-panel
+              role="tabpanel"
+              aria-labelledby="poop-mobile-tab-upgrades"
+            >
+              <!-- upgrade icons (locked until milestones) -->
+            </div>
           </div>
         </aside>
       </div>
