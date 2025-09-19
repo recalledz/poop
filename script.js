@@ -63,6 +63,7 @@ const upgrades = [
   {
     id: "upgrade1",
     name: "Poop Scooper",
+    icon: "🧹",
     description: "Make every defecate click more productive.",
     cost: 100,
     effect: () => {
@@ -74,6 +75,7 @@ const upgrades = [
   {
     id: "upgrade2",
     name: "Composting Bin",
+    icon: "♻️",
     description: "Generates a slow passive stream of poop.",
     cost: 500,
     effect: () => {
@@ -85,6 +87,7 @@ const upgrades = [
   {
     id: "upgrade3",
     name: "Super Poop Vacuum",
+    icon: "🌀",
     description: "Supercharge your workers' output.",
     cost: 2500,
     effect: () => {
@@ -101,6 +104,7 @@ const upgrades = [
   {
     id: "upgrade4",
     name: "Advanced Composting System",
+    icon: "🌿",
     description: "Massively increases passive generation and lowers hiring costs.",
     cost: 10000,
     effect: () => {
@@ -645,51 +649,55 @@ function renderUpgrades() {
 
     if (upgrade.isPurchased) {
       card.classList.add("purchased");
-    }
-
-    if (!upgrade.isUnlocked()) {
+    } else if (!upgrade.isUnlocked()) {
       card.classList.add("locked");
+    } else if (points < upgrade.cost) {
+      card.classList.add("unaffordable");
+    } else {
+      card.classList.add("affordable");
     }
 
-    const title = document.createElement("h4");
+    const header = document.createElement("div");
+    header.className = "upgrade-header";
+
+    const icon = document.createElement("span");
+    icon.className = "upgrade-icon";
+    icon.textContent = upgrade.icon || "✨";
+
+    const title = document.createElement("span");
+    title.className = "upgrade-name";
     title.textContent = upgrade.name;
 
-    const description = document.createElement("p");
-    description.className = "upgrade-description";
-    description.textContent = upgrade.description;
+    header.append(icon, title);
 
-    const cost = document.createElement("p");
+    const cost = document.createElement("div");
     cost.className = "upgrade-cost";
     cost.textContent = `Cost: ${formatNumber(upgrade.cost)}`;
 
-    const status = document.createElement("p");
-    status.className = "upgrade-status";
-    if (upgrade.isPurchased) {
-      status.textContent = "Purchased";
-    } else if (!upgrade.isUnlocked()) {
-      status.textContent = "Locked";
-    } else if (points < upgrade.cost) {
-      status.textContent = "Need more poop";
-    } else {
-      status.textContent = "Ready to purchase";
-    }
-
     const button = document.createElement("button");
     button.type = "button";
+    button.className = "upgrade-button";
 
     if (upgrade.isPurchased) {
-      button.textContent = "Purchased";
+      button.textContent = "Owned";
       button.disabled = true;
     } else if (!upgrade.isUnlocked()) {
       button.textContent = "Locked";
       button.disabled = true;
     } else {
-      button.textContent = `Buy (${formatNumber(upgrade.cost)})`;
-      button.disabled = points < upgrade.cost;
+      button.textContent = "Buy";
+      button.disabled = false;
       button.addEventListener("click", () => purchaseUpgrade(upgrade));
     }
 
-    card.append(title, description, cost, status, button);
+    const tooltip = document.createElement("div");
+    tooltip.className = "upgrade-tooltip";
+    tooltip.textContent = upgrade.description;
+    const tooltipId = `${upgrade.id}-tooltip`;
+    tooltip.id = tooltipId;
+    button.setAttribute("aria-describedby", tooltipId);
+
+    card.append(header, cost, button, tooltip);
     upgradesPanel.appendChild(card);
   });
 }
