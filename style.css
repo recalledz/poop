@@ -16,7 +16,7 @@ button {
   cursor: pointer;
 }
 
-button:hover {
+button:not(:disabled):hover {
   background-color: #5c443d;
 }
 
@@ -331,45 +331,213 @@ button:hover {
 
 #upgrades-panel {
   grid-area: upgrades;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
   margin-bottom: 1rem;
+  align-content: start;
+  grid-auto-rows: minmax(160px, auto);
+}
+
+@media (min-width: 900px) {
+  #upgrades-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
+
+@media (min-width: 1200px) {
+  #upgrades-panel {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
 
 .upgrade-card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 0.25rem;
+  justify-content: flex-start;
+  gap: 0.5rem;
   padding: 0.75rem;
-  background: #d9c7a1;
+  background: #e5d4ac;
   border: 2px solid #4e3629;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
   text-align: left;
+  aspect-ratio: 0.9;
+  min-height: 160px;
+  isolation: isolate;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.upgrade-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.upgrade-card:not(.locked):not(.purchased):hover {
+  transform: translateY(-2px);
+}
+
+.upgrade-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.upgrade-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.upgrade-name {
+  font-weight: 700;
+  font-size: 0.85rem;
+  line-height: 1.15;
+}
+
+.upgrade-card-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.upgrade-cost {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.upgrade-buy-button {
+  width: 100%;
+  font-size: 0.8rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.5rem;
+}
+
+.upgrade-buy-button:disabled {
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.upgrade-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.5rem);
+  transform: translateX(-50%);
+  max-width: 220px;
+  width: max-content;
+  padding: 0.5rem 0.65rem;
+  background: #4e3629;
+  color: #fff;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  text-align: left;
+  white-space: normal;
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 10;
+}
+
+.upgrade-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: #4e3629 transparent transparent transparent;
+}
+
+.upgrade-card:hover .upgrade-tooltip,
+.upgrade-card:focus-within .upgrade-tooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .upgrade-card.locked {
-  opacity: 0.6;
+  background: #cacaca;
+  border-color: #9a9a9a;
+  color: #555;
+}
+
+.upgrade-card.locked .upgrade-buy-button {
+  background: #9a9a9a;
+  cursor: not-allowed;
+}
+
+.upgrade-card.locked::after {
+  content: "🔒";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 2.25rem;
+  color: rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  z-index: 3;
+  border-radius: inherit;
+}
+
+.upgrade-card.unaffordable {
+  background: #d2c4a5;
+  border-color: #a89268;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.upgrade-card.unaffordable::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+
+.upgrade-card.unaffordable .upgrade-buy-button {
+  background: #7b5e57;
+}
+
+.upgrade-card.affordable {
+  border-color: #ffcc66;
+  box-shadow: 0 0 0 2px rgba(255, 204, 102, 0.65), 0 6px 16px rgba(78, 54, 41, 0.35);
+}
+
+.upgrade-card.affordable .upgrade-buy-button {
+  background: linear-gradient(135deg, #f9b64c, #f6d365);
+  color: #4e3629;
+  font-weight: 700;
 }
 
 .upgrade-card.purchased {
-  opacity: 0.75;
+  background: #cfc4a3;
+  border-color: #9f9170;
+  opacity: 0.65;
 }
 
-.upgrade-card h4 {
-  margin: 0;
-  font-size: 1rem;
+.upgrade-card.purchased .upgrade-buy-button {
+  background: #9f9170;
+  cursor: not-allowed;
 }
 
-.upgrade-card p {
-  margin: 0;
-  font-size: 0.85rem;
+.upgrade-card-shake {
+  animation: upgrade-card-shake 0.35s ease;
 }
 
-.upgrade-card button {
-  margin-top: 0.5rem;
-  align-self: stretch;
+@keyframes upgrade-card-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
 }
 
 

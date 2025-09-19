@@ -63,6 +63,7 @@ const upgrades = [
   {
     id: "upgrade1",
     name: "Poop Scooper",
+    icon: "🧹",
     description: "Make every defecate click more productive.",
     cost: 100,
     effect: () => {
@@ -74,6 +75,7 @@ const upgrades = [
   {
     id: "upgrade2",
     name: "Composting Bin",
+    icon: "🗑️",
     description: "Generates a slow passive stream of poop.",
     cost: 500,
     effect: () => {
@@ -85,6 +87,7 @@ const upgrades = [
   {
     id: "upgrade3",
     name: "Super Poop Vacuum",
+    icon: "💨",
     description: "Supercharge your workers' output.",
     cost: 2500,
     effect: () => {
@@ -101,6 +104,7 @@ const upgrades = [
   {
     id: "upgrade4",
     name: "Advanced Composting System",
+    icon: "🌱",
     description: "Massively increases passive generation and lowers hiring costs.",
     cost: 10000,
     effect: () => {
@@ -640,56 +644,90 @@ function renderUpgrades() {
   upgradesPanel.innerHTML = "";
 
   upgrades.forEach((upgrade) => {
-    const card = document.createElement("div");
+    const card = document.createElement("article");
     card.className = "upgrade-card";
+    card.dataset.upgradeId = upgrade.id;
 
-    if (upgrade.isPurchased) {
+    const isLocked = !upgrade.isUnlocked();
+    const isPurchased = upgrade.isPurchased;
+    const canAfford = points >= upgrade.cost;
+
+    if (isPurchased) {
       card.classList.add("purchased");
-    }
-
-    if (!upgrade.isUnlocked()) {
+    } else if (isLocked) {
       card.classList.add("locked");
+    } else if (canAfford) {
+      card.classList.add("affordable");
+    } else {
+      card.classList.add("unaffordable");
     }
 
-    const title = document.createElement("h4");
-    title.textContent = upgrade.name;
+    const header = document.createElement("div");
+    header.className = "upgrade-card-header";
 
-    const description = document.createElement("p");
-    description.className = "upgrade-description";
-    description.textContent = upgrade.description;
+    const icon = document.createElement("span");
+    icon.className = "upgrade-icon";
+    icon.textContent = upgrade.icon || "✨";
 
-    const cost = document.createElement("p");
+    const name = document.createElement("span");
+    name.className = "upgrade-name";
+    name.textContent = upgrade.name;
+
+    header.append(icon, name);
+
+    const footer = document.createElement("div");
+    footer.className = "upgrade-card-footer";
+
+    const cost = document.createElement("span");
     cost.className = "upgrade-cost";
     cost.textContent = `Cost: ${formatNumber(upgrade.cost)}`;
 
-    const status = document.createElement("p");
-    status.className = "upgrade-status";
-    if (upgrade.isPurchased) {
-      status.textContent = "Purchased";
-    } else if (!upgrade.isUnlocked()) {
-      status.textContent = "Locked";
-    } else if (points < upgrade.cost) {
-      status.textContent = "Need more poop";
-    } else {
-      status.textContent = "Ready to purchase";
-    }
-
     const button = document.createElement("button");
     button.type = "button";
+    button.className = "upgrade-buy-button";
 
-    if (upgrade.isPurchased) {
+    let buttonLabel = "";
+
+    if (isPurchased) {
       button.textContent = "Purchased";
       button.disabled = true;
-    } else if (!upgrade.isUnlocked()) {
+      button.setAttribute("aria-disabled", "true");
+      buttonLabel = `${upgrade.name} purchased`;
+    } else if (isLocked) {
       button.textContent = "Locked";
       button.disabled = true;
+      button.setAttribute("aria-disabled", "true");
+      buttonLabel = `${upgrade.name} is locked`;
     } else {
-      button.textContent = `Buy (${formatNumber(upgrade.cost)})`;
-      button.disabled = points < upgrade.cost;
-      button.addEventListener("click", () => purchaseUpgrade(upgrade));
+      button.textContent = "Buy";
+      button.disabled = false;
+      button.removeAttribute("aria-disabled");
+      buttonLabel = canAfford
+        ? `Buy ${upgrade.name} for ${formatNumber(upgrade.cost)} poop`
+        : `Buy ${upgrade.name} for ${formatNumber(upgrade.cost)} poop (need more poop)`;
+
+      button.addEventListener("click", () => {
+        if (points < upgrade.cost) {
+          card.classList.add("upgrade-card-shake");
+          setTimeout(() => card.classList.remove("upgrade-card-shake"), 350);
+          return;
+        }
+        purchaseUpgrade(upgrade);
+      });
     }
 
-    card.append(title, description, cost, status, button);
+    button.setAttribute("aria-label", buttonLabel);
+
+    const tooltip = document.createElement("div");
+    tooltip.className = "upgrade-tooltip";
+    tooltip.id = `${upgrade.id}-tooltip`;
+    tooltip.textContent = upgrade.description;
+
+    button.setAttribute("aria-describedby", tooltip.id);
+
+    footer.append(cost, button);
+
+    card.append(header, footer, tooltip);
     upgradesPanel.appendChild(card);
   });
 }
