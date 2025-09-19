@@ -149,14 +149,12 @@ button:hover {
 /* side panels */
 #poop-side-panel {
   grid-area: side;
-  grid-template-rows:
-  auto    /* poop progress bar (poop-header) */
-  auto     /* poop icon + amount (poop-info) */
-  1fr;     /* spaces grid + side panel */
+  display: grid;
+  grid-template-rows: auto auto 1fr;
   grid-template-areas:
-  "currencies""
-  "poopers""
-  "upgrades";
+    "currencies"
+    "poopers"
+    "upgrades";
   background: #b4a98d;
   padding: 1rem;
   overflow: auto;
