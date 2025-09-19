@@ -63,6 +63,7 @@ const upgrades = [
   {
     id: "upgrade1",
     name: "Poop Scooper",
+    icon: "🧹",
     description: "Make every defecate click more productive.",
     cost: 100,
     effect: () => {
@@ -74,6 +75,7 @@ const upgrades = [
   {
     id: "upgrade2",
     name: "Composting Bin",
+    icon: "🗑️",
     description: "Generates a slow passive stream of poop.",
     cost: 500,
     effect: () => {
@@ -85,6 +87,7 @@ const upgrades = [
   {
     id: "upgrade3",
     name: "Super Poop Vacuum",
+    icon: "💨",
     description: "Supercharge your workers' output.",
     cost: 2500,
     effect: () => {
@@ -101,6 +104,7 @@ const upgrades = [
   {
     id: "upgrade4",
     name: "Advanced Composting System",
+    icon: "🌿",
     description: "Massively increases passive generation and lowers hiring costs.",
     cost: 10000,
     effect: () => {
@@ -642,54 +646,90 @@ function renderUpgrades() {
   upgrades.forEach((upgrade) => {
     const card = document.createElement("div");
     card.className = "upgrade-card";
+    card.tabIndex = 0;
+    card.dataset.tooltip = upgrade.description;
+    card.setAttribute(
+      "aria-label",
+      `${upgrade.name}: ${upgrade.description}. Cost ${formatNumber(upgrade.cost)} poop.`
+    );
 
-    if (upgrade.isPurchased) {
-      card.classList.add("purchased");
-    }
+    const isUnlocked = upgrade.isUnlocked();
+    const isPurchased = upgrade.isPurchased;
+    const canAfford = points >= upgrade.cost;
 
-    if (!upgrade.isUnlocked()) {
+    if (!isUnlocked) {
       card.classList.add("locked");
-    }
-
-    const title = document.createElement("h4");
-    title.textContent = upgrade.name;
-
-    const description = document.createElement("p");
-    description.className = "upgrade-description";
-    description.textContent = upgrade.description;
-
-    const cost = document.createElement("p");
-    cost.className = "upgrade-cost";
-    cost.textContent = `Cost: ${formatNumber(upgrade.cost)}`;
-
-    const status = document.createElement("p");
-    status.className = "upgrade-status";
-    if (upgrade.isPurchased) {
-      status.textContent = "Purchased";
-    } else if (!upgrade.isUnlocked()) {
-      status.textContent = "Locked";
-    } else if (points < upgrade.cost) {
-      status.textContent = "Need more poop";
+    } else if (isPurchased) {
+      card.classList.add("purchased");
+    } else if (canAfford) {
+      card.classList.add("affordable");
     } else {
-      status.textContent = "Ready to purchase";
+      card.classList.add("unaffordable");
     }
+
+    const header = document.createElement("div");
+    header.className = "upgrade-header";
+
+    const icon = document.createElement("span");
+    icon.className = "upgrade-icon";
+    icon.textContent = upgrade.icon || "✨";
+
+    const name = document.createElement("span");
+    name.className = "upgrade-name";
+    name.textContent = upgrade.name;
+
+    header.append(icon, name);
+
+    const footer = document.createElement("div");
+    footer.className = "upgrade-footer";
+
+    const cost = document.createElement("div");
+    cost.className = "upgrade-cost";
+    cost.innerHTML = `
+      <span class="upgrade-cost-label">Cost</span>
+      <span class="upgrade-cost-value">${formatNumber(upgrade.cost)}</span>
+    `;
 
     const button = document.createElement("button");
     button.type = "button";
+    button.className = "upgrade-buy";
 
-    if (upgrade.isPurchased) {
+    if (isPurchased) {
       button.textContent = "Purchased";
       button.disabled = true;
-    } else if (!upgrade.isUnlocked()) {
+    } else if (!isUnlocked) {
       button.textContent = "Locked";
       button.disabled = true;
     } else {
-      button.textContent = `Buy (${formatNumber(upgrade.cost)})`;
-      button.disabled = points < upgrade.cost;
-      button.addEventListener("click", () => purchaseUpgrade(upgrade));
+      button.textContent = "Buy";
+      if (!canAfford) {
+        button.title = "Need more poop";
+      }
+
+      button.addEventListener("click", () => {
+        if (upgrade.isPurchased || !upgrade.isUnlocked()) {
+          return;
+        }
+
+        if (points < upgrade.cost) {
+          button.classList.remove("upgrade-buy-denied");
+          // Force reflow to restart the animation when class is re-added
+          void button.offsetWidth;
+          button.classList.add("upgrade-buy-denied");
+          button.addEventListener(
+            "animationend",
+            () => button.classList.remove("upgrade-buy-denied"),
+            { once: true }
+          );
+          return;
+        }
+
+        purchaseUpgrade(upgrade);
+      });
     }
 
-    card.append(title, description, cost, status, button);
+    footer.append(cost, button);
+    card.append(header, footer);
     upgradesPanel.appendChild(card);
   });
 }
