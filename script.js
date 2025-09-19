@@ -696,23 +696,38 @@ function calculatePooperCompletionReward(pooper) {
 }
 
 function getPoopPerSecond() {
-  const activeRate = poopers.reduce((sum, pooper) => {
-    if (pooper.state !== STATE_POOPING) {
-      return sum;
-    }
+  const lifecycleStates = [
+    STATE_EATING,
+    STATE_DIGESTING,
+    STATE_LOOKING_FOR_SPOT,
+    STATE_WAITING_FOR_SPOT,
+    STATE_POOPING,
+    STATE_RESTING,
+  ];
 
-    const completionReward = calculatePooperCompletionReward(pooper);
-    const poopingDurationSeconds =
-      (POOPER_STATE_DURATIONS[STATE_POOPING] ?? 1000) / 1000;
-
-    if (poopingDurationSeconds <= 0) {
-      return sum;
-    }
-
-    return sum + completionReward / poopingDurationSeconds;
+  const totalLifecycleDurationMs = lifecycleStates.reduce((durationSum, state) => {
+    const duration = POOPER_STATE_DURATIONS[state];
+    return durationSum + (typeof duration === "number" ? duration : 0);
   }, 0);
 
-  return activeRate + passivePoopPerSecond;
+  if (totalLifecycleDurationMs <= 0) {
+    return passivePoopPerSecond;
+  }
+
+  const totalLifecycleDurationSeconds = totalLifecycleDurationMs / 1000;
+
+  const projectedWorkerRate = poopers.reduce((sum, pooper) => {
+    const completionReward = calculatePooperCompletionReward(pooper);
+    if (!(completionReward > 0)) {
+      return sum;
+    }
+
+    const throughput = completionReward / totalLifecycleDurationSeconds;
+
+    return sum + throughput;
+  }, 0);
+
+  return projectedWorkerRate + passivePoopPerSecond;
 }
 //--------------Update UI function-------------//
 function updateUI() {
