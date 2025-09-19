@@ -33,19 +33,28 @@
         </div>
 
         <!-- poop main poop counter + defecate button -->
-        <div class="poop-info">
-          <h2>poop:</h2>
-          <p class="poop"></p>
-            <div class="poopIcon">💩</div>
-            <div id="poopAmount">0</div>
-            <div id="poopPerSecond">poop/second: 0</div>
-          <button id="defecatebutton">defecate</button>
-        </div>
-  
-        <!-- main grid -->
         <div class="poop-main">
-          <div id="spaces-grid">
-          </div>
+          <section class="poop-focus-card" aria-labelledby="poop-focus-heading">
+            <div class="poop-info">
+              <h2 id="poop-focus-heading">Poop Reserve</h2>
+              <div class="poop-totals">
+                <div class="poopIcon" aria-hidden="true">💩</div>
+                <div class="poop-counts">
+                  <div id="poopAmount" class="poop-amount">0</div>
+                  <div id="poopPerSecond" class="poop-per-second">poop/second: 0</div>
+                </div>
+              </div>
+              <button id="defecatebutton" class="primary-action">Defecate</button>
+            </div>
+          </section>
+
+          <section class="plot-section" aria-labelledby="empty-plots-heading">
+            <div class="section-heading">
+              <h3 id="empty-plots-heading">Empty Plots</h3>
+              <p>Invest in new restrooms to keep the poop flowing.</p>
+            </div>
+            <div id="spaces-grid" class="plot-grid"></div>
+          </section>
         </div>
         <!-- A.h: side panel -->
         <aside id="poop-side-panel">
@@ -87,39 +96,51 @@
               Upgrades
             </button>
           </nav>
-          <div id="poop-mobile-panels">
-            <div id="poopers-panel">
+          <div id="poop-mobile-panels" data-accordion-group>
+            <details class="panel-accordion-item" data-accordion-item open>
+              <summary class="panel-heading accordion-summary">
+                <span>Pooper Hiring</span>
+              </summary>
               <div
                 id="pooper-hiring"
-                class="panel-section mobile-panel-active"
+                class="panel-section accordion-content mobile-panel-active"
                 data-mobile-panel
                 role="tabpanel"
                 aria-labelledby="poop-mobile-tab-hiring"
               >
-                <h3 class="panel-heading">Pooper Hiring</h3>
                 <!-- list of pooper types + available/total + buy button -->
               </div>
+            </details>
+            <details class="panel-accordion-item" data-accordion-item>
+              <summary class="panel-heading accordion-summary">
+                <span>Pooper List</span>
+              </summary>
               <section
                 id="pooper-list-section"
-                class="panel-section"
+                class="panel-section accordion-content"
                 data-mobile-panel
                 role="tabpanel"
                 aria-labelledby="poop-mobile-tab-list"
               >
-                <h3 class="panel-heading">Pooper List</h3>
                 <div id="pooper-list-body" class="pooper-list" role="list">
                   <!-- dynamically populated -->
                 </div>
               </section>
-            </div>
-            <div
-              id="upgrades-panel"
-              data-mobile-panel
-              role="tabpanel"
-              aria-labelledby="poop-mobile-tab-upgrades"
-            >
-              <!-- upgrade icons (locked until milestones) -->
-            </div>
+            </details>
+            <details class="panel-accordion-item" data-accordion-item>
+              <summary class="panel-heading accordion-summary">
+                <span>Upgrades</span>
+              </summary>
+              <div
+                id="upgrades-panel"
+                class="accordion-content"
+                data-mobile-panel
+                role="tabpanel"
+                aria-labelledby="poop-mobile-tab-upgrades"
+              >
+                <!-- upgrade icons (locked until milestones) -->
+              </div>
+            </details>
           </div>
         </aside>
       </div>

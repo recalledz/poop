@@ -59,12 +59,24 @@ const POOPER_STATE_LABELS = {
   [STATE_RESTING]: "Resting",
 };
 
+const POOPER_STATE_ICONS = {
+  [STATE_IDLE]: "🪑",
+  [STATE_EATING]: "🍽️",
+  [STATE_DIGESTING]: "🍲",
+  [STATE_LOOKING_FOR_SPOT]: "👀",
+  [STATE_WAITING_FOR_SPOT]: "⏳",
+  [STATE_POOPING]: "💩",
+  [STATE_RESTING]: "💤",
+};
+
 const upgrades = [
   {
     id: "upgrade1",
     name: "Poop Scooper",
+    icon: "🧹",
     description: "Make every defecate click more productive.",
     cost: 100,
+    unlockAt: 50,
     effect: () => {
       poopPerClick += 50;
     },
@@ -74,8 +86,10 @@ const upgrades = [
   {
     id: "upgrade2",
     name: "Composting Bin",
+    icon: "🗑️",
     description: "Generates a slow passive stream of poop.",
     cost: 500,
+    unlockAt: 250,
     effect: () => {
       passivePoopPerSecond += 1;
     },
@@ -85,8 +99,10 @@ const upgrades = [
   {
     id: "upgrade3",
     name: "Super Poop Vacuum",
+    icon: "🌀",
     description: "Supercharge your workers' output.",
     cost: 2500,
+    unlockAt: 1000,
     effect: () => {
       aPoopers[0].rate += 2;
       poopers.forEach(pooper => {
@@ -101,8 +117,10 @@ const upgrades = [
   {
     id: "upgrade4",
     name: "Advanced Composting System",
+    icon: "🌿",
     description: "Massively increases passive generation and lowers hiring costs.",
     cost: 10000,
+    unlockAt: 5000,
     effect: () => {
       passivePoopPerSecond += 5;
       averagePooperCost = Math.max(5, Math.floor(averagePooperCost * 0.9));
@@ -122,8 +140,18 @@ const spacesDisplay      = document.getElementById("spaces");
 const aPooperCostDisplay = document.getElementById("aPooperCost");
 const poopPerSecondDisplay = document.getElementById("poopPerSecond");
 const upgradesPanel      = document.getElementById("upgrades-panel");
+const poopFocusCard      = document.querySelector(".poop-focus-card");
 
 let pooperListContainer = null;
+let previousPoints = 0;
+
+if (poopIcon) {
+  poopIcon.addEventListener("animationend", (event) => {
+    if (event.animationName === "poopBounce") {
+      poopIcon.classList.remove("poop-bounce");
+    }
+  });
+}
 
 
 //-------------------Spot grid------------------------
@@ -133,7 +161,46 @@ document.addEventListener('DOMContentLoaded', () => {
   const panels = document.querySelectorAll('.tab-panel');
   const buildingMenu = document.getElementById('building-menu');
   const spacesGrid   = document.getElementById('spaces-grid');
+  const mobileMediaQuery = window.matchMedia('(max-width: 767px)');
+  const accordionGroup = document.querySelector('[data-accordion-group]');
+  const accordionItems = accordionGroup
+    ? Array.from(accordionGroup.querySelectorAll('[data-accordion-item]'))
+    : [];
+  let suppressAccordionSync = false;
+  let activateMobilePanelForAccordion = (panelId) => {
+    if (panelId) {
+      setAccordionOpen(panelId);
+    }
+  };
   let selectedSpace = null;
+
+  function setAccordionOpen(targetId) {
+    if (!accordionItems.length) {
+      return;
+    }
+
+    suppressAccordionSync = true;
+    accordionItems.forEach((item, index) => {
+      const panel = item.querySelector('[data-mobile-panel]');
+      if (!panel) {
+        return;
+      }
+
+      const shouldOpen = panel.id === targetId || (!targetId && index === 0);
+      item.open = shouldOpen;
+    });
+    suppressAccordionSync = false;
+  }
+
+  function getOpenAccordionPanelId() {
+    const openItem = accordionItems.find((item) => item.open);
+    if (!openItem) {
+      return null;
+    }
+
+    const panel = openItem.querySelector('[data-mobile-panel]');
+    return panel ? panel.id : null;
+  }
 
   tabs.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -176,17 +243,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (spacesGrid) {
     for (let i = 1; i <= maxSpaces; i++) {
-      const item = document.createElement('div');
-      item.className = 'space-item';
+      const item = document.createElement('article');
+      item.className = 'space-item locked';
+      item.dataset.spaceIndex = String(i);
+
+      const header = document.createElement('div');
+      header.className = 'plot-card-header';
+
+      const icon = document.createElement('span');
+      icon.className = 'plot-icon';
+      icon.textContent = '🕳️';
+
+      const headerText = document.createElement('div');
+      headerText.className = 'plot-header-text';
+
+      const title = document.createElement('h4');
+      title.textContent = `Plot ${i}`;
+
+      const subtitle = document.createElement('span');
+      subtitle.textContent = 'Reserve space for future restrooms.';
+
+      headerText.append(title, subtitle);
+      header.append(icon, headerText);
 
       const info = document.createElement('div');
       info.className = 'spot-info';
-      info.innerHTML = '<strong>Empty Plot</strong><div>Buy a spot to unlock capacity.</div>';
-      item.appendChild(info);
+      info.innerHTML = '<strong>Empty Plot</strong><div>Unlocks soon.</div>';
+
+      const progressWrapper = document.createElement('div');
+      progressWrapper.className = 'plot-progress-wrapper';
+
+      const progressBar = document.createElement('div');
+      progressBar.className = 'plot-progress-bar';
+
+      const progressFill = document.createElement('div');
+      progressFill.className = 'plot-progress-fill';
+      progressBar.appendChild(progressFill);
+
+      const progressLabel = document.createElement('span');
+      progressLabel.className = 'plot-progress-label';
+      progressWrapper.append(progressBar, progressLabel);
 
       const btn = document.createElement('button');
-      btn.textContent = 'Buy';
-      btn.disabled   = false;
+      btn.className = 'plot-action card-button';
+      btn.type = 'button';
+      btn.textContent = 'Locked';
+      btn.disabled   = true;
       btn.dataset.spaceIndex = i;
 
       btn.addEventListener('click', (e) => {
@@ -204,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.stopPropagation();
       });
 
-      item.appendChild(btn);
+      item.append(header, info, progressWrapper, btn);
       spacesGrid.appendChild(item);
     }
   }
@@ -250,7 +352,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const buyButton = document.getElementById(`buy-pooper-${idx}`);
       buyButton.addEventListener('click', () => {
         buyPooper(idx);
-        console.log(`Clicked Buy for ${template.name} (index=${idx})`);
       });
 
       updatePooperCountDisplay(idx);
@@ -267,47 +368,61 @@ document.addEventListener('DOMContentLoaded', () => {
     const mobileTabButtons = Array.from(
       mobileTabsContainer.querySelectorAll('.poop-mobile-tab[data-target]')
     );
-    const mobileMediaQuery = window.matchMedia('(max-width: 767px)');
-
-    function showAllMobilePanels() {
-      mobilePanels.forEach((panel) => {
-        panel.classList.remove('mobile-panel-active');
-        panel.removeAttribute('aria-hidden');
-        panel.removeAttribute('hidden');
-        panel.removeAttribute('tabindex');
-      });
+    const highlightMobileTab = (targetId) => {
       mobileTabButtons.forEach((button) => {
-        button.classList.remove('active');
-        button.setAttribute('aria-selected', 'false');
-      });
-    }
-
-    function activateMobilePanel(targetId) {
-      mobilePanels.forEach((panel) => {
-        const isActive = panel.id === targetId;
-        panel.classList.toggle('mobile-panel-active', isActive);
-        panel.toggleAttribute('hidden', !isActive);
-        panel.setAttribute('aria-hidden', String(!isActive));
-        panel.setAttribute('tabindex', isActive ? '0' : '-1');
-      });
-
-      mobileTabButtons.forEach((button) => {
-        const isActive = button.dataset.target === targetId;
+        const isActive = targetId != null && button.dataset.target === targetId;
         button.classList.toggle('active', isActive);
         button.setAttribute('aria-selected', String(isActive));
       });
+    };
+
+    function activateMobilePanel(targetId, { syncAccordion = true } = {}) {
+      const isMobile = mobileMediaQuery.matches;
+
+      mobilePanels.forEach((panel) => {
+        const isActive = panel.id === targetId;
+        panel.classList.toggle('mobile-panel-active', isActive);
+
+        if (isMobile) {
+          panel.toggleAttribute('hidden', !isActive);
+          panel.setAttribute('aria-hidden', String(!isActive));
+          panel.setAttribute('tabindex', isActive ? '0' : '-1');
+        } else {
+          panel.removeAttribute('hidden');
+          panel.removeAttribute('aria-hidden');
+          panel.removeAttribute('tabindex');
+        }
+      });
+
+      highlightMobileTab(isMobile ? targetId : null);
+
+      if (syncAccordion) {
+        setAccordionOpen(targetId);
+      }
     }
+
+    activateMobilePanelForAccordion = (panelId, options = {}) => {
+      activateMobilePanel(panelId, { ...options, syncAccordion: false });
+    };
 
     function syncMobilePanelsForViewport() {
       if (!mobileMediaQuery.matches) {
-        showAllMobilePanels();
+        const openPanelId = getOpenAccordionPanelId() ?? (mobilePanels[0]?.id ?? null);
+        setAccordionOpen(openPanelId);
+        mobilePanels.forEach((panel) => {
+          const isActive = panel.id === openPanelId;
+          panel.classList.toggle('mobile-panel-active', isActive);
+          panel.removeAttribute('hidden');
+          panel.removeAttribute('aria-hidden');
+          panel.removeAttribute('tabindex');
+        });
+        highlightMobileTab(null);
         return;
       }
 
       let activeButton = mobileTabButtons.find((button) => button.classList.contains('active'));
       if (!activeButton && mobileTabButtons.length > 0) {
         activeButton = mobileTabButtons[0];
-        activeButton.classList.add('active');
       }
 
       if (activeButton) {
@@ -317,7 +432,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     mobileTabButtons.forEach((button) => {
       button.addEventListener('click', () => {
+        const targetId = button.dataset.target;
+
         if (!mobileMediaQuery.matches) {
+          setAccordionOpen(targetId);
+          activateMobilePanel(targetId, { syncAccordion: false });
           return;
         }
 
@@ -325,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        activateMobilePanel(button.dataset.target);
+        activateMobilePanel(targetId);
       });
     });
 
@@ -336,6 +455,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     syncMobilePanelsForViewport();
+  } else {
+    const initialPanelId = getOpenAccordionPanelId();
+    if (initialPanelId) {
+      setAccordionOpen(initialPanelId);
+    }
+  }
+
+  if (accordionItems.length) {
+    accordionItems.forEach((item) => {
+      item.addEventListener('toggle', () => {
+        if (suppressAccordionSync) {
+          return;
+        }
+
+        if (!item.open) {
+          const anyOpen = accordionItems.some((other) => other.open);
+          if (!anyOpen) {
+            suppressAccordionSync = true;
+            item.open = true;
+            suppressAccordionSync = false;
+          }
+          return;
+        }
+
+        accordionItems.forEach((other) => {
+          if (other !== item) {
+            suppressAccordionSync = true;
+            other.open = false;
+            suppressAccordionSync = false;
+          }
+        });
+
+        const panel = item.querySelector('[data-mobile-panel]');
+        if (panel) {
+          activateMobilePanelForAccordion(panel.id);
+        }
+      });
+    });
   }
 
   updateUI();
@@ -449,7 +606,11 @@ function renderPooperList() {
     const stateEl = document.createElement('span');
     stateEl.className = 'pooper-state';
     const stateLabel = getPooperStateLabel(pooper.state);
+    const stateIcon = document.createElement('span');
+    stateIcon.className = 'pooper-state-icon';
+    stateIcon.textContent = POOPER_STATE_ICONS[pooper.state] ?? '🚽';
     stateEl.textContent = stateLabel;
+    stateEl.prepend(stateIcon);
 
     header.append(nameEl, stateEl);
 
@@ -539,35 +700,89 @@ function updateSpotDisplay(index, slotElement) {
     return;
   }
 
-  let info = slot.querySelector('.spot-info');
-  if (!info) {
-    info = document.createElement('div');
-    info.className = 'spot-info';
-    slot.insertBefore(info, slot.firstChild ?? null);
-  }
-
-  const spot = spots[index];
+  const info = slot.querySelector('.spot-info');
   const btn = slot.querySelector('button');
+  const progressWrapper = slot.querySelector('.plot-progress-wrapper');
+  const progressFill = slot.querySelector('.plot-progress-fill');
+  const progressLabel = slot.querySelector('.plot-progress-label');
+  const requirement = spaceThresholds[index] ?? null;
+  const unlockedSlots = getUnlockedSpaces();
+  const isUnlocked = index < unlockedSlots;
+  const spot = spots[index];
 
-  if (!spot) {
-    info.innerHTML = '<strong>Empty Plot</strong><div>Buy a spot to unlock capacity.</div>';
+  slot.classList.toggle('locked', !isUnlocked);
+  slot.classList.toggle('owned', Boolean(spot));
+
+  if (!isUnlocked) {
+    const target = requirement ?? 0;
+    if (info) {
+      const requirementText = target > 0
+        ? `Unlocks at ${formatNumber(target)} total poop.`
+        : 'Keep progressing to unlock this plot soon.';
+      info.innerHTML = `<strong>Empty Plot</strong><div>${requirementText}</div>`;
+    }
+
+    if (progressWrapper && progressFill && progressLabel) {
+      progressWrapper.hidden = false;
+      if (target > 0) {
+        const progress = Math.max(0, Math.min(1, totalPoints / target));
+        progressFill.style.width = `${progress * 100}%`;
+        progressLabel.textContent = `${formatNumber(totalPoints)} / ${formatNumber(target)} poop`;
+      } else {
+        progressFill.style.width = '0%';
+        progressLabel.textContent = 'Locked';
+      }
+    }
+
     if (btn) {
-      btn.textContent = 'Buy';
-      btn.disabled = false;
+      const buttonText = target > 0
+        ? `Locked (${formatNumber(target)})`
+        : 'Locked';
+      btn.textContent = buttonText;
+      btn.disabled = true;
+      if (target > 0) {
+        btn.title = `Requires ${formatNumber(target)} total poop`;
+      }
     }
     return;
   }
 
-  info.innerHTML = `
-    <strong>${spot.name}</strong>
-    <div class="spot-capacity">Capacity: ${spot.capacity}</div>
-    <div class="spot-occupants">Occupants: ${spot.occupants.size} / ${spot.capacity}</div>
-    <div>Multiplier: x${spot.multiplier.toFixed(2)}</div>
-  `;
+  if (!spot) {
+    if (info) {
+      info.innerHTML = '<strong>Empty Plot</strong><div>Select a restroom to increase capacity.</div>';
+    }
+
+    if (progressWrapper && progressFill && progressLabel) {
+      progressWrapper.hidden = false;
+      progressFill.style.width = '100%';
+      progressLabel.textContent = 'Ready to develop';
+    }
+
+    if (btn) {
+      btn.textContent = 'Choose Restroom';
+      btn.disabled = false;
+      btn.title = 'Open the build menu to choose a restroom';
+    }
+    return;
+  }
+
+  if (info) {
+    info.innerHTML = `
+      <strong>${spot.name}</strong>
+      <div class="spot-capacity">Capacity: ${spot.capacity}</div>
+      <div class="spot-occupants">Occupants: ${spot.occupants.size} / ${spot.capacity}</div>
+      <div>Multiplier: x${spot.multiplier.toFixed(2)}</div>
+    `;
+  }
+
+  if (progressWrapper) {
+    progressWrapper.hidden = true;
+  }
 
   if (btn) {
     btn.textContent = 'Owned';
     btn.disabled = true;
+    btn.title = 'Already developed';
   }
 }
 
@@ -640,7 +855,7 @@ function renderUpgrades() {
   upgradesPanel.innerHTML = "";
 
   upgrades.forEach((upgrade) => {
-    const card = document.createElement("div");
+    const card = document.createElement("article");
     card.className = "upgrade-card";
 
     if (upgrade.isPurchased) {
@@ -651,8 +866,18 @@ function renderUpgrades() {
       card.classList.add("locked");
     }
 
+    const header = document.createElement("div");
+    header.className = "upgrade-header";
+
+    const icon = document.createElement("span");
+    icon.className = "upgrade-icon";
+    icon.textContent = upgrade.icon ?? "✨";
+
     const title = document.createElement("h4");
+    title.className = "upgrade-title";
     title.textContent = upgrade.name;
+
+    header.append(icon, title);
 
     const description = document.createElement("p");
     description.className = "upgrade-description";
@@ -667,29 +892,78 @@ function renderUpgrades() {
     if (upgrade.isPurchased) {
       status.textContent = "Purchased";
     } else if (!upgrade.isUnlocked()) {
-      status.textContent = "Locked";
+      const requirement = upgrade.unlockAt != null
+        ? `Unlocks at ${formatNumber(upgrade.unlockAt)} poop`
+        : "Locked";
+      status.textContent = requirement;
     } else if (points < upgrade.cost) {
-      status.textContent = "Need more poop";
+      const deficit = formatNumber(Math.max(0, upgrade.cost - points));
+      status.textContent = `Need ${deficit} more poop`;
     } else {
       status.textContent = "Ready to purchase";
     }
 
+    const actions = document.createElement("div");
+    actions.className = "upgrade-actions";
+
+    const progressWrapper = document.createElement("div");
+    progressWrapper.className = "card-progress-wrapper";
+
+    const progressBar = document.createElement("div");
+    progressBar.className = "card-progress";
+
+    const progressFill = document.createElement("div");
+    progressFill.className = "card-progress-fill";
+    progressBar.appendChild(progressFill);
+
+    const progressLabel = document.createElement("span");
+    progressLabel.className = "card-progress-label";
+    progressWrapper.append(progressBar, progressLabel);
+
     const button = document.createElement("button");
     button.type = "button";
+    button.className = "card-button";
 
     if (upgrade.isPurchased) {
       button.textContent = "Purchased";
       button.disabled = true;
     } else if (!upgrade.isUnlocked()) {
-      button.textContent = "Locked";
+      const requirementText = upgrade.unlockAt != null
+        ? `Locked (${formatNumber(upgrade.unlockAt)})`
+        : "Locked";
+      button.textContent = requirementText;
       button.disabled = true;
+      if (upgrade.unlockAt != null) {
+        button.title = `Requires ${formatNumber(upgrade.unlockAt)} total poop`;
+      }
     } else {
       button.textContent = `Buy (${formatNumber(upgrade.cost)})`;
       button.disabled = points < upgrade.cost;
-      button.addEventListener("click", () => purchaseUpgrade(upgrade));
+      if (button.disabled) {
+        button.title = `Need ${formatNumber(Math.max(0, upgrade.cost - points))} more poop`;
+      } else {
+        button.addEventListener("click", () => purchaseUpgrade(upgrade));
+      }
     }
 
-    card.append(title, description, cost, status, button);
+    if (typeof upgrade.unlockAt === "number") {
+      const target = upgrade.unlockAt;
+      const progress = Math.max(0, Math.min(1, totalPoints / target));
+      progressFill.style.width = `${progress * 100}%`;
+      if (upgrade.isPurchased) {
+        progressLabel.textContent = "Purchased";
+      } else if (progress >= 1) {
+        progressLabel.textContent = "Unlocked";
+      } else {
+        progressLabel.textContent = `${formatNumber(totalPoints)} / ${formatNumber(target)} poop`;
+      }
+      progressWrapper.hidden = false;
+    } else {
+      progressWrapper.hidden = true;
+    }
+
+    actions.append(progressWrapper, button);
+    card.append(header, description, cost, status, actions);
     upgradesPanel.appendChild(card);
   });
 }
@@ -711,7 +985,6 @@ function updateProgressBar(current, max) {
   const percentage = (current / max) * 100;
   progressBar.style.width = `${percentage}%`;
   progressBar.textContent = `${formatNumber(current)} / ${formatNumber(max)}`;
-  console.log(`Progress: ${percentage}%`);
 }
 
 function getUnlockedSpaces() {
@@ -812,20 +1085,19 @@ function getPoopPerSecond() {
 }
 //--------------Update UI function-------------//
 function updateUI() {
-  const unlocked = getUnlockedSpaces();
-  console.log(
-    `TotalPoop=${totalPoints}, thresholds passed=${
-      unlocked - initialUnlocked
-    }, slots unlocked=${unlocked}`
-  );
-  // 1) Poop counter + icon size
+  if (points > previousPoints) {
+    triggerPoopBounce();
+  }
+
   poopAmount.textContent = formatNumber(points);
   const pps = getPoopPerSecond();
-  poopPerSecondDisplay.textContent = `Poop/sec: ${formatNumber(pps)}`;
-  // Grow the poop icon up to 10× its base size at 300k poop
+  poopPerSecondDisplay.textContent = `POOP/SEC: ${formatNumber(pps)}`;
+
   const growthProgress = Math.min(points, maxPoopForIconSize) / maxPoopForIconSize;
   const newIconSize = basePoopIconSize * (1 + growthProgress * 9);
   poopIcon.style.fontSize = `${newIconSize}px`;
+
+  previousPoints = points;
 
   const pooperBuyButton = document.getElementById('buy-pooper-0');
   if (pooperBuyButton) {
@@ -834,21 +1106,6 @@ function updateUI() {
 
   const slots = document.querySelectorAll('#spaces-grid .space-item');
   slots.forEach((slot, i) => {
-    const btn = slot.querySelector('button');
-    // 1) Visibility
-    if (i < unlocked) {
-      slot.style.display = 'flex';
-    } else {
-      slot.style.display = 'none';
-      return;  // no need to touch buttons on hidden slots
-    }
-
-    // 2) Lock vs. Buy label
-    if (btn.textContent === 'Locked') {
-      btn.textContent = 'Buy';
-      btn.disabled    = false;
-    }
-
     updateSpotDisplay(i, slot);
   });
   const buildingMenuEl = document.getElementById('building-menu');
@@ -869,12 +1126,41 @@ function updateUI() {
 
 }
 
+function triggerPoopBounce() {
+  if (!poopIcon) {
+    return;
+  }
+
+  poopIcon.classList.remove('poop-bounce');
+  // Force reflow so the animation can restart
+  void poopIcon.offsetWidth;
+  poopIcon.classList.add('poop-bounce');
+}
+
+function spawnPoopParticle(amount) {
+  if (!poopFocusCard) {
+    return;
+  }
+
+  const particle = document.createElement('span');
+  particle.className = 'poop-particle';
+  const value = Math.max(1, Math.round(amount));
+  particle.textContent = `+${formatNumber(value)}`;
+  const offset = (Math.random() - 0.5) * 90;
+  particle.style.setProperty('--x-offset', `${offset}px`);
+  poopFocusCard.appendChild(particle);
+  particle.addEventListener('animationend', () => {
+    particle.remove();
+  });
+}
+
 // ─── Actions ─────────────────────────────────────────
 
 // Manual click
 defecateButton.addEventListener("click", () => {
   points += poopPerClick;
   totalPoints += poopPerClick;
+  spawnPoopParticle(poopPerClick);
   updateUI();
 });
 
