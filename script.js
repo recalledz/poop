@@ -723,12 +723,27 @@ function purchaseUpgrade(upgrade) {
 }
 
 function updateProgressBar(current, max) {
+  const container = document.getElementById("poop-progress-container");
+  const progressBar = document.getElementById("poop-progress-bar");
 
-  const progressBar = document.getElementById('poop-progress-bar');
-  const percentage = (current / max) * 100;
+  if (!container || !progressBar) {
+    return;
+  }
+
+  const ratio = max > 0 ? current / max : 0;
+  const percentage = Math.max(0, Math.min(100, ratio * 100));
+
   progressBar.style.width = `${percentage}%`;
-  progressBar.textContent = `${formatNumber(current)} / ${formatNumber(max)}`;
-  console.log(`Progress: ${percentage}%`);
+  progressBar.textContent = "";
+
+  let label = container.querySelector(".poop-progress-label");
+  if (!label) {
+    label = document.createElement("span");
+    label.className = "poop-progress-label";
+    container.appendChild(label);
+  }
+
+  label.textContent = `${formatNumber(current)} / ${formatNumber(max)}`;
 }
 
 function getUnlockedSpaces() {
