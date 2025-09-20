@@ -55,6 +55,7 @@ const spotRoster = [
 ];
 
 const spots = spotRoster.map(createSpotState);
+const spotViews = [];
 let averagePooperCost = 10;
 const aPoopers = [
   { name: "Average Pooper", rate: 1 }  // rate = poop/sec
@@ -162,20 +163,19 @@ const poopIcon           = document.querySelector(".poopIcon");
 const basePoopIconSize   = parseFloat(getComputedStyle(poopIcon).fontSize);
 const maxPoopForIconSize = 300000; // cap growth at 300k poop
 const defecateButton     = document.getElementById("defecatebutton");
-const spacesDisplay      = document.getElementById("spaces");
-const aPooperCostDisplay = document.getElementById("aPooperCost");
 const poopPerSecondDisplay = document.getElementById("poopPerSecond");
 const upgradesPanel      = document.getElementById("upgrades-panel");
 
 let pooperListContainer = null;
 
 
-//-------------------Spot grid------------------------
+//-------------------Spot strip------------------------
 document.addEventListener('DOMContentLoaded', () => {
   // Tab switching
   const tabs   = document.querySelectorAll('.tab-btn');
   const panels = document.querySelectorAll('.tab-panel');
-  const spacesGrid   = document.getElementById('spaces-grid');
+  const spotStrip   = document.getElementById('spot-strip');
+  const spotAccordion = document.getElementById('spot-accordion');
 
   tabs.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -190,24 +190,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  if (spacesGrid) {
-    spacesGrid.innerHTML = '';
-    spots.forEach((spot, index) => {
-      const item = document.createElement('div');
-      item.className = 'space-item';
-      item.dataset.spotIndex = String(index);
+  if (spotStrip || spotAccordion) {
+    spots.forEach((_, index) => {
+      if (spotStrip) {
+        const card = createSpotCard(index);
+        spotStrip.appendChild(card);
+      }
 
-      const info = document.createElement('div');
-      info.className = 'spot-info';
-      item.appendChild(info);
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.dataset.spotIndex = String(index);
-      btn.addEventListener('click', () => upgradeSpot(index));
-      item.appendChild(btn);
-
-      spacesGrid.appendChild(item);
+      if (spotAccordion) {
+        const accordionItem = createSpotAccordionItem(index);
+        spotAccordion.appendChild(accordionItem);
+      }
     });
   }
 
@@ -238,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const mobileTabsContainer = document.getElementById('poop-mobile-tabs');
-  const mobilePanelIds = ['pooper-hiring', 'pooper-list-section', 'upgrades-panel'];
+  const mobilePanelIds = ['pooper-hiring', 'pooper-list-section', 'spots-mobile-panel', 'upgrades-panel'];
   const mobilePanels = mobilePanelIds
     .map((panelId) => document.getElementById(panelId))
     .filter((panel) => panel);
@@ -520,6 +513,228 @@ function createSpotState(config) {
   return spot;
 }
 
+function ensureSpotView(index) {
+  if (!spotViews[index]) {
+    spotViews[index] = { renderedLevel: null };
+  }
+  return spotViews[index];
+}
+
+function createSpotCard(index) {
+  const view = ensureSpotView(index);
+  const card = document.createElement('article');
+  card.className = 'spot-card';
+  card.dataset.spotIndex = String(index);
+  card.setAttribute('role', 'listitem');
+
+  const body = document.createElement('div');
+  body.className = 'spot-card-body';
+
+  const icon = document.createElement('div');
+  icon.className = 'spot-icon';
+
+  const header = document.createElement('div');
+  header.className = 'spot-header';
+
+  const nameEl = document.createElement('h3');
+  nameEl.className = 'spot-name';
+
+  const levelBadge = document.createElement('span');
+  levelBadge.className = 'spot-level-badge';
+
+  header.append(nameEl, levelBadge);
+
+  const multiplier = document.createElement('div');
+  multiplier.className = 'spot-multiplier';
+
+  const occupancy = document.createElement('div');
+  occupancy.className = 'spot-occupancy';
+
+  const occupancyBar = document.createElement('div');
+  occupancyBar.className = 'spot-occupancy-bar';
+
+  const occupancyFill = document.createElement('div');
+  occupancyFill.className = 'spot-occupancy-fill';
+  occupancyBar.appendChild(occupancyFill);
+
+  const occupancyText = document.createElement('span');
+  occupancyText.className = 'spot-occupancy-text';
+  occupancy.append(occupancyBar, occupancyText);
+
+  const upgradeButton = document.createElement('button');
+  upgradeButton.type = 'button';
+  upgradeButton.className = 'spot-upgrade-button';
+  upgradeButton.addEventListener('click', () => upgradeSpot(index));
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'spot-tooltip';
+  tooltip.setAttribute('role', 'presentation');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'spot-locked-overlay';
+
+  const overlayMessage = document.createElement('div');
+  overlayMessage.className = 'spot-locked-message';
+  overlay.appendChild(overlayMessage);
+
+  body.append(icon, header, multiplier, occupancy, upgradeButton);
+  card.append(body, overlay, tooltip);
+
+  view.card = {
+    element: card,
+    icon,
+    name: nameEl,
+    levelBadge,
+    multiplier,
+    occupancyFill,
+    occupancyText,
+    upgradeButton,
+    overlay,
+    overlayMessage,
+    tooltip,
+  };
+
+  return card;
+}
+
+function createSpotAccordionItem(index) {
+  const view = ensureSpotView(index);
+  const details = document.createElement('details');
+  details.className = 'spot-accordion-item';
+  details.dataset.spotIndex = String(index);
+  details.setAttribute('role', 'listitem');
+
+  const summary = document.createElement('summary');
+  summary.className = 'spot-accordion-summary';
+
+  const icon = document.createElement('span');
+  icon.className = 'spot-accordion-icon';
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'spot-accordion-name';
+
+  const level = document.createElement('span');
+  level.className = 'spot-accordion-level';
+
+  summary.append(icon, nameEl, level);
+
+  const body = document.createElement('div');
+  body.className = 'spot-accordion-body';
+
+  const multiplier = document.createElement('div');
+  multiplier.className = 'spot-accordion-multiplier';
+
+  const occupancy = document.createElement('div');
+  occupancy.className = 'spot-accordion-occupancy';
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'spot-accordion-tooltip';
+
+  const lockedMessage = document.createElement('div');
+  lockedMessage.className = 'spot-accordion-locked';
+
+  const upgradeButton = document.createElement('button');
+  upgradeButton.type = 'button';
+  upgradeButton.className = 'spot-upgrade-button';
+  upgradeButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    upgradeSpot(index);
+  });
+
+  body.append(multiplier, occupancy, tooltip, lockedMessage, upgradeButton);
+  details.append(summary, body);
+
+  view.accordion = {
+    element: details,
+    summary,
+    icon,
+    name: nameEl,
+    level,
+    multiplier,
+    occupancy,
+    tooltip,
+    locked: lockedMessage,
+    upgradeButton,
+  };
+
+  return details;
+}
+
+function updateSpotUpgradeButton(button, spot) {
+  if (!button) {
+    return;
+  }
+
+  button.classList.remove('is-locked', 'is-maxed', 'is-unaffordable');
+
+  if (!spot.isUnlocked) {
+    button.textContent = 'Locked';
+    button.disabled = true;
+    button.classList.add('is-locked');
+    return;
+  }
+
+  const cost = spot.nextUpgradeCost;
+
+  if (cost == null) {
+    button.textContent = 'Max Level';
+    button.disabled = true;
+    button.classList.add('is-maxed');
+    return;
+  }
+
+  const canAfford = points >= cost;
+  button.textContent = `Upgrade (${formatNumber(cost)})`;
+  button.disabled = !canAfford;
+
+  if (!canAfford) {
+    button.classList.add('is-unaffordable');
+  }
+}
+
+function createSpotTooltipMarkup(spot, tier, nextTier) {
+  const unlocked = spot.isUnlocked;
+  const capacityLabel = `${spot.capacity} seat${spot.capacity === 1 ? '' : 's'}`;
+  const bonusLabel = unlocked ? `x${spot.multiplier.toFixed(2)}` : '—';
+  const nextLabel = nextTier
+    ? `${nextTier.name} (x${nextTier.multiplier.toFixed(2)})`
+    : 'Maxed';
+  const upgradeCostLabel = spot.nextUpgradeCost != null
+    ? formatNumber(spot.nextUpgradeCost)
+    : '—';
+
+  return `
+    <dl class="spot-tooltip-list">
+      <div class="spot-tooltip-row"><dt>Tier</dt><dd>${unlocked ? tier.name : 'Locked'}</dd></div>
+      <div class="spot-tooltip-row"><dt>Capacity</dt><dd>${capacityLabel}</dd></div>
+      <div class="spot-tooltip-row"><dt>Occupancy</dt><dd>${spot.occupants.size} / ${spot.capacity}</dd></div>
+      <div class="spot-tooltip-row"><dt>Bonus</dt><dd>${bonusLabel}</dd></div>
+      <div class="spot-tooltip-row"><dt>Next Tier</dt><dd>${nextLabel}</dd></div>
+      <div class="spot-tooltip-row"><dt>Upgrade Cost</dt><dd>${upgradeCostLabel}</dd></div>
+      <div class="spot-tooltip-row"><dt>Unlock Rule</dt><dd>${formatNumber(spot.unlockAtTotal)} total poop</dd></div>
+    </dl>
+  `;
+}
+
+function triggerSpotLevelAnimation(element, className) {
+  if (!element) {
+    return;
+  }
+
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+
+  if (element._spotLevelTimeout) {
+    clearTimeout(element._spotLevelTimeout);
+  }
+
+  element._spotLevelTimeout = setTimeout(() => {
+    element.classList.remove(className);
+    delete element._spotLevelTimeout;
+  }, 900);
+}
+
 function updateSpotUnlocks() {
   spots.forEach((spot) => {
     if (!spot.isUnlocked && totalPoints >= spot.unlockAtTotal) {
@@ -561,66 +776,142 @@ function upgradeSpot(index) {
   updateUI();
 }
 
-function updateSpotDisplay(index, slotElement) {
-  const items = document.querySelectorAll('#spaces-grid .space-item');
-  const slot = slotElement ?? items[index];
-
-  if (!slot) {
-    return;
-  }
-
-  let info = slot.querySelector('.spot-info');
-  if (!info) {
-    info = document.createElement('div');
-    info.className = 'spot-info';
-    slot.insertBefore(info, slot.firstChild ?? null);
-  }
-
+function updateSpotDisplay(index) {
   const spot = spots[index];
-  const btn = slot.querySelector('button');
-
   if (!spot) {
     return;
   }
 
-  const tier = getSpotTier(spot.level) || { icon: '', name: 'Spot' };
+  const view = ensureSpotView(index);
+  const tier = getSpotTier(spot.level) || spotTierConfig[0] || {
+    name: 'Spot',
+    icon: '❓',
+    multiplier: 1,
+  };
+  const nextTier = spotTierConfig[spot.level + 1] || null;
+  const iconSymbol = spot.isUnlocked ? (tier.icon || '❓') : '🔒';
+  const tooltipMarkup = createSpotTooltipMarkup(spot, tier, nextTier);
 
-  if (!spot.isUnlocked) {
-    const baseTier = getSpotTier(0) || tier;
-    info.innerHTML = `
-      <strong>${(baseTier && baseTier.icon) || ''} ${spot.name}</strong>
-      <div class="spot-locked">Locked</div>
-      <div>Unlocks at ${formatNumber(spot.unlockAtTotal)} total poop</div>
-    `;
-    if (btn) {
-      btn.textContent = 'Locked';
-      btn.disabled = true;
+  if (view?.card) {
+    const {
+      element,
+      icon,
+      name,
+      levelBadge,
+      multiplier,
+      occupancyFill,
+      occupancyText,
+      upgradeButton,
+      overlayMessage,
+      tooltip,
+    } = view.card;
+
+    element.classList.toggle('spot-card--locked', !spot.isUnlocked);
+
+    if (icon) {
+      icon.textContent = iconSymbol;
     }
-    return;
+
+    if (name) {
+      name.textContent = spot.name;
+    }
+
+    if (levelBadge) {
+      levelBadge.textContent = `Lv ${spot.level}`;
+    }
+
+    if (multiplier) {
+      multiplier.textContent = spot.isUnlocked
+        ? `Multiplier x${spot.multiplier.toFixed(2)}`
+        : 'Locked';
+    }
+
+    if (occupancyFill) {
+      const ratio = spot.capacity > 0
+        ? Math.min(1, spot.occupants.size / spot.capacity)
+        : 0;
+      occupancyFill.style.width = `${ratio * 100}%`;
+    }
+
+    if (occupancyText) {
+      occupancyText.textContent = `Occupancy: ${spot.occupants.size} / ${spot.capacity}`;
+    }
+
+    updateSpotUpgradeButton(upgradeButton, spot);
+
+    if (overlayMessage) {
+      overlayMessage.textContent = `Unlock at ${formatNumber(spot.unlockAtTotal)} total poop`;
+      overlayMessage.style.display = spot.isUnlocked ? 'none' : '';
+    }
+
+    if (tooltip) {
+      tooltip.innerHTML = tooltipMarkup;
+      tooltip.setAttribute('aria-hidden', spot.isUnlocked ? 'false' : 'true');
+    }
   }
 
-  const nextCost = spot.nextUpgradeCost;
-  const upgradeInfo = nextCost != null
-    ? `<div>Next Upgrade: ${formatNumber(nextCost)}</div>`
-    : '<div>Maxed Out</div>';
+  if (view?.accordion) {
+    const {
+      element,
+      icon,
+      name,
+      level,
+      multiplier,
+      occupancy,
+      tooltip,
+      locked,
+      upgradeButton,
+    } = view.accordion;
 
-  info.innerHTML = `
-    <strong>${(tier && tier.icon) || ''} ${spot.name}</strong>
-    <div>Tier: ${tier.name}</div>
-    <div>Level: ${spot.level}</div>
-    <div class="spot-occupants">Occupants: ${spot.occupants.size} / ${spot.capacity}</div>
-    <div>Multiplier: x${spot.multiplier.toFixed(2)}</div>
-    ${upgradeInfo}
-  `;
-
-  if (btn) {
-    if (nextCost == null) {
-      btn.textContent = 'Max Level';
-      btn.disabled = true;
-    } else {
-      btn.textContent = `Upgrade (${formatNumber(nextCost)})`;
-      btn.disabled = points < nextCost;
+    if (element) {
+      element.classList.toggle('spot-accordion-item--locked', !spot.isUnlocked);
     }
+
+    if (icon) {
+      icon.textContent = iconSymbol;
+    }
+
+    if (name) {
+      name.textContent = spot.name;
+    }
+
+    if (level) {
+      level.textContent = `Lv ${spot.level}`;
+    }
+
+    if (multiplier) {
+      multiplier.textContent = spot.isUnlocked
+        ? `Multiplier: x${spot.multiplier.toFixed(2)}`
+        : 'Multiplier: —';
+    }
+
+    if (occupancy) {
+      occupancy.textContent = `Occupancy: ${spot.occupants.size} / ${spot.capacity}`;
+    }
+
+    if (tooltip) {
+      tooltip.innerHTML = tooltipMarkup;
+    }
+
+    if (locked) {
+      locked.textContent = spot.isUnlocked ? '' : `Unlock at ${formatNumber(spot.unlockAtTotal)} total poop`;
+    }
+
+    updateSpotUpgradeButton(upgradeButton, spot);
+  }
+
+  if (view) {
+    if (view.renderedLevel != null && spot.level > view.renderedLevel) {
+      if (view.card?.element) {
+        triggerSpotLevelAnimation(view.card.element, 'spot-card--leveled');
+      }
+
+      if (view.accordion?.element) {
+        triggerSpotLevelAnimation(view.accordion.element, 'spot-accordion-item--leveled');
+      }
+    }
+
+    view.renderedLevel = spot.level;
   }
 }
 
@@ -914,11 +1205,7 @@ function updateUI() {
     pooperBuyButton.textContent = `Buy (${formatNumber(averagePooperCost)})`;
   }
 
-  const slots = document.querySelectorAll('#spaces-grid .space-item');
-  slots.forEach((slot, i) => {
-    slot.style.display = 'flex';
-    updateSpotDisplay(i, slot);
-  });
+  spots.forEach((_, index) => updateSpotDisplay(index));
   aPoopers.forEach((_, idx) => updatePooperCountDisplay(idx));
   updateProgressBar(totalPoints, 1e15);
   renderUpgrades();
