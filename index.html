@@ -90,37 +90,96 @@
             </button>
           </nav>
           <div id="poop-mobile-panels">
-            <div id="poopers-panel">
-              <div
-                id="pooper-hiring"
-                class="panel-section mobile-panel-active"
-                data-mobile-panel
-                role="tabpanel"
-                aria-labelledby="poop-mobile-tab-hiring"
-              >
-                <h3 class="panel-heading">Pooper Hiring</h3>
-                <!-- list of pooper types + available/total + buy button -->
-              </div>
-              <section
-                id="pooper-list-section"
-                class="panel-section"
-                data-mobile-panel
-                role="tabpanel"
-                aria-labelledby="poop-mobile-tab-list"
-              >
-                <h3 class="panel-heading">Pooper List</h3>
-                <div id="pooper-list-body" class="pooper-list" role="list">
-                  <!-- dynamically populated -->
+            <div id="poop-accordion" class="accordion" role="presentation">
+              <section class="accordion-item is-open" data-panel-id="pooper-hiring">
+                <h3 class="accordion-heading">
+                  <button
+                    type="button"
+                    class="accordion-trigger"
+                    data-accordion-target="pooper-hiring"
+                    aria-controls="pooper-hiring"
+                    aria-expanded="true"
+                    id="accordion-trigger-hiring"
+                  >
+                    <span class="accordion-title">Pooper Hiring</span>
+                  </button>
+                </h3>
+                <div class="accordion-content">
+                  <div class="accordion-content-inner">
+                    <div
+                      id="pooper-hiring"
+                      class="panel-section mobile-panel-active"
+                      data-mobile-panel
+                      role="tabpanel"
+                      aria-labelledby="poop-mobile-tab-hiring accordion-trigger-hiring"
+                      tabindex="0"
+                      aria-hidden="false"
+                    >
+                      <!-- list of pooper types + available/total + buy button -->
+                    </div>
+                  </div>
                 </div>
               </section>
-            </div>
-            <div
-              id="upgrades-panel"
-              data-mobile-panel
-              role="tabpanel"
-              aria-labelledby="poop-mobile-tab-upgrades"
-            >
-              <!-- upgrade icons (locked until milestones) -->
+              <section class="accordion-item" data-panel-id="pooper-list-section">
+                <h3 class="accordion-heading">
+                  <button
+                    type="button"
+                    class="accordion-trigger"
+                    data-accordion-target="pooper-list-section"
+                    aria-controls="pooper-list-section"
+                    aria-expanded="false"
+                    id="accordion-trigger-list"
+                  >
+                    <span class="accordion-title">Pooper List</span>
+                  </button>
+                </h3>
+                <div class="accordion-content">
+                  <div class="accordion-content-inner">
+                    <section
+                      id="pooper-list-section"
+                      class="panel-section"
+                      data-mobile-panel
+                      role="tabpanel"
+                      aria-labelledby="poop-mobile-tab-list accordion-trigger-list"
+                      tabindex="-1"
+                      aria-hidden="true"
+                    >
+                      <div id="pooper-list-body" class="pooper-list" role="list">
+                        <!-- dynamically populated -->
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </section>
+              <section class="accordion-item" data-panel-id="upgrades-panel">
+                <h3 class="accordion-heading">
+                  <button
+                    type="button"
+                    class="accordion-trigger"
+                    data-accordion-target="upgrades-panel"
+                    aria-controls="upgrades-panel"
+                    aria-expanded="false"
+                    id="accordion-trigger-upgrades"
+                  >
+                    <span class="accordion-title">Upgrades</span>
+                  </button>
+                </h3>
+                <div class="accordion-content">
+                  <div class="accordion-content-inner">
+                    <div
+                      id="upgrades-panel"
+                      class="panel-section"
+                      data-mobile-panel
+                      role="tabpanel"
+                      aria-labelledby="poop-mobile-tab-upgrades accordion-trigger-upgrades"
+                      tabindex="-1"
+                      aria-hidden="true"
+                    >
+                      <!-- upgrade icons (locked until milestones) -->
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
         </aside>

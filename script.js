@@ -262,84 +262,98 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const mobileTabsContainer = document.getElementById('poop-mobile-tabs');
-  const mobilePanelIds = ['pooper-hiring', 'pooper-list-section', 'upgrades-panel'];
-  const mobilePanels = mobilePanelIds
-    .map((panelId) => document.getElementById(panelId))
-    .filter((panel) => panel);
+  const mobileTabButtons = mobileTabsContainer
+    ? Array.from(mobileTabsContainer.querySelectorAll('.poop-mobile-tab[data-target]'))
+    : [];
+  const mobileMediaQuery = window.matchMedia('(max-width: 767px)');
+  const accordionContainer = document.getElementById('poop-accordion');
+  const accordionItems = accordionContainer
+    ? Array.from(accordionContainer.querySelectorAll('.accordion-item[data-panel-id]'))
+    : [];
+  let activeAccordionPanelId = null;
 
-  if (mobileTabsContainer && mobilePanels.length) {
-    const mobileTabButtons = Array.from(
-      mobileTabsContainer.querySelectorAll('.poop-mobile-tab[data-target]')
-    );
-    const mobileMediaQuery = window.matchMedia('(max-width: 767px)');
-
-    function showAllMobilePanels() {
-      mobilePanels.forEach((panel) => {
-        panel.classList.remove('mobile-panel-active');
-        panel.removeAttribute('aria-hidden');
-        panel.removeAttribute('hidden');
-        panel.removeAttribute('tabindex');
-      });
-      mobileTabButtons.forEach((button) => {
-        button.classList.remove('active');
-        button.setAttribute('aria-selected', 'false');
-      });
+  function setAccordionPanel(targetId) {
+    if (!targetId) {
+      return;
     }
 
-    function activateMobilePanel(targetId) {
-      mobilePanels.forEach((panel) => {
-        const isActive = panel.id === targetId;
+    activeAccordionPanelId = targetId;
+
+    accordionItems.forEach((item) => {
+      const panelId = item.dataset.panelId;
+      const trigger = item.querySelector('.accordion-trigger');
+      const panel = panelId ? document.getElementById(panelId) : null;
+      const isActive = panelId === targetId;
+
+      item.classList.toggle('is-open', isActive);
+
+      if (trigger) {
+        trigger.setAttribute('aria-expanded', String(isActive));
+      }
+
+      if (panel) {
         panel.classList.toggle('mobile-panel-active', isActive);
-        panel.toggleAttribute('hidden', !isActive);
         panel.setAttribute('aria-hidden', String(!isActive));
         panel.setAttribute('tabindex', isActive ? '0' : '-1');
-      });
+        panel.toggleAttribute('inert', !isActive);
+      }
+    });
 
-      mobileTabButtons.forEach((button) => {
-        const isActive = button.dataset.target === targetId;
-        button.classList.toggle('active', isActive);
-        button.setAttribute('aria-selected', String(isActive));
-      });
+    mobileTabButtons.forEach((button) => {
+      const isActive = button.dataset.target === targetId;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-selected', String(isActive));
+    });
+  }
+
+  accordionItems.forEach((item) => {
+    const trigger = item.querySelector('.accordion-trigger');
+    const panelId = item.dataset.panelId;
+    if (!trigger || !panelId) {
+      return;
     }
 
-    function syncMobilePanelsForViewport() {
-      if (!mobileMediaQuery.matches) {
-        showAllMobilePanels();
+    trigger.addEventListener('click', () => {
+      if (activeAccordionPanelId === panelId) {
         return;
       }
 
-      let activeButton = mobileTabButtons.find((button) => button.classList.contains('active'));
-      if (!activeButton && mobileTabButtons.length > 0) {
-        activeButton = mobileTabButtons[0];
-        activeButton.classList.add('active');
-      }
-
-      if (activeButton) {
-        activateMobilePanel(activeButton.dataset.target);
-      }
-    }
-
-    mobileTabButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        if (!mobileMediaQuery.matches) {
-          return;
-        }
-
-        if (button.classList.contains('active')) {
-          return;
-        }
-
-        activateMobilePanel(button.dataset.target);
-      });
+      setAccordionPanel(panelId);
     });
+  });
 
-    if (typeof mobileMediaQuery.addEventListener === 'function') {
-      mobileMediaQuery.addEventListener('change', syncMobilePanelsForViewport);
-    } else if (typeof mobileMediaQuery.addListener === 'function') {
-      mobileMediaQuery.addListener(syncMobilePanelsForViewport);
+  mobileTabButtons.forEach((button) => {
+    const targetId = button.dataset.target;
+    if (!targetId) {
+      return;
     }
 
-    syncMobilePanelsForViewport();
+    button.addEventListener('click', () => {
+      if (activeAccordionPanelId === targetId) {
+        return;
+      }
+
+      setAccordionPanel(targetId);
+    });
+  });
+
+  const initialAccordionItem = accordionItems.find((item) => item.classList.contains('is-open'))
+    || accordionItems[0];
+
+  if (initialAccordionItem) {
+    setAccordionPanel(initialAccordionItem.dataset.panelId);
+  }
+
+  function refreshAccordionForViewport() {
+    if (activeAccordionPanelId) {
+      setAccordionPanel(activeAccordionPanelId);
+    }
+  }
+
+  if (typeof mobileMediaQuery.addEventListener === 'function') {
+    mobileMediaQuery.addEventListener('change', refreshAccordionForViewport);
+  } else if (typeof mobileMediaQuery.addListener === 'function') {
+    mobileMediaQuery.addListener(refreshAccordionForViewport);
   }
 
   updateUI();
