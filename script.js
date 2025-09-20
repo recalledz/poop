@@ -5,17 +5,57 @@ let points = 0;
 let totalPoints = 0;
 let poopPerClick = 100;
 let passivePoopPerSecond = 0;
-const spaceThresholds = [20, 100, 1000, 100000, 1000000, 100000000, 1000000000, 10000000000, 100000000000];
-const maxSpaces = spaceThresholds.length;
-const spotTypes = [
-  { id: "porta_potty", name: "Porta Potty", cost: 100, capacity: 1, multiplier: 1 },
-  { id: "family_bathroom", name: "Family Bathroom", cost: 450, capacity: 2, multiplier: 1.35 },
-  { id: "luxury_restroom", name: "Luxury Restroom", cost: 2000, capacity: 4, multiplier: 1.8 },
+
+function createCostCurve(baseCost, growthRate, levelOffset) {
+  return (level) => baseCost * Math.pow(growthRate, Math.max(0, level - levelOffset));
+}
+
+const spotTierConfig = [
+  {
+    id: "compost-corner",
+    name: "Compost Corner",
+    icon: "🌿",
+    multiplier: 1,
+    costCurve: () => 0,
+  },
+  {
+    id: "bucket-brigade",
+    name: "Bucket Brigade",
+    icon: "🪣",
+    multiplier: 1.35,
+    costCurve: createCostCurve(350, 1.25, 1),
+  },
+  {
+    id: "porcelain-palace",
+    name: "Porcelain Palace",
+    icon: "🚽",
+    multiplier: 1.75,
+    costCurve: createCostCurve(1200, 1.3, 2),
+  },
+  {
+    id: "spa-suite",
+    name: "Spa Suite",
+    icon: "🧖",
+    multiplier: 2.2,
+    costCurve: createCostCurve(3200, 1.4, 3),
+  },
+  {
+    id: "galactic-gazebo",
+    name: "Galactic Gazebo",
+    icon: "🪐",
+    multiplier: 3,
+    costCurve: createCostCurve(7600, 1.5, 4),
+  },
 ];
 
-let spots = new Array(maxSpaces).fill(null);
+const spotRoster = [
+  { id: "rustic-hollow", name: "Rustic Hollow", unlockAtTotal: 0 },
+  { id: "garden-nook", name: "Garden Nook", unlockAtTotal: 0 },
+  { id: "skyline-suite", name: "Skyline Suite", unlockAtTotal: 2500 },
+];
+
+const spots = spotRoster.map(createSpotState);
 let averagePooperCost = 10;
-let initialUnlocked = 0;
 const aPoopers = [
   { name: "Average Pooper", rate: 1 }  // rate = poop/sec
 ];
@@ -135,9 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tab switching
   const tabs   = document.querySelectorAll('.tab-btn');
   const panels = document.querySelectorAll('.tab-panel');
-  const buildingMenu = document.getElementById('building-menu');
   const spacesGrid   = document.getElementById('spaces-grid');
-  let selectedSpace = null;
 
   tabs.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -152,86 +190,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  if (buildingMenu) {
-    buildingMenu.innerHTML = '';
-    spotTypes.forEach((type) => {
-      const option = document.createElement('button');
-      option.dataset.spotType = type.id;
-      option.innerHTML = `
-        <span class="spot-name">${type.name}</span>
-        <span class="spot-stats">
-          Cost: ${formatNumber(type.cost)}<br>
-          Capacity: ${type.capacity}<br>
-          Multiplier: x${type.multiplier.toFixed(2)}
-        </span>
-      `;
-      buildingMenu.appendChild(option);
-    });
-  }
-
-  function updateMenuButtonState() {
-    if (!buildingMenu) return;
-    const slotOwned = selectedSpace != null ? Boolean(spots[selectedSpace - 1]) : false;
-    buildingMenu.querySelectorAll('button').forEach((button) => {
-      const type = spotTypes.find((candidate) => candidate.id === button.dataset.spotType);
-      button.disabled = slotOwned || !type || points < type.cost;
-    });
-  }
-
   if (spacesGrid) {
-    for (let i = 1; i <= maxSpaces; i++) {
+    spacesGrid.innerHTML = '';
+    spots.forEach((spot, index) => {
       const item = document.createElement('div');
       item.className = 'space-item';
+      item.dataset.spotIndex = String(index);
 
       const info = document.createElement('div');
       info.className = 'spot-info';
-      info.innerHTML = '<strong>Empty Plot</strong><div>Buy a spot to unlock capacity.</div>';
       item.appendChild(info);
 
       const btn = document.createElement('button');
-      btn.textContent = 'Buy';
-      btn.disabled   = false;
-      btn.dataset.spaceIndex = i;
-
-      btn.addEventListener('click', (e) => {
-        if (btn.disabled) return;
-        if (spots[i - 1]) return;
-        selectedSpace = i;
-        const rect = btn.getBoundingClientRect();
-        if (buildingMenu) {
-          buildingMenu.dataset.selectedSpace = String(i);
-          buildingMenu.style.left    = `${rect.left + window.scrollX}px`;
-          buildingMenu.style.top     = `${rect.bottom + window.scrollY}px`;
-          updateMenuButtonState();
-          buildingMenu.style.display = 'flex';
-        }
-        e.stopPropagation();
-      });
-
+      btn.type = 'button';
+      btn.dataset.spotIndex = String(index);
+      btn.addEventListener('click', () => upgradeSpot(index));
       item.appendChild(btn);
+
       spacesGrid.appendChild(item);
-    }
-  }
-
-  document.addEventListener('click', () => {
-    if (buildingMenu) {
-      buildingMenu.style.display = 'none';
-      delete buildingMenu.dataset.selectedSpace;
-    }
-    selectedSpace = null;
-  });
-
-  if (buildingMenu) {
-    buildingMenu.addEventListener('click', (e) => {
-      const button = e.target.closest('button');
-      if (!button) return;
-      if (selectedSpace == null) return;
-      const typeId = button.dataset.spotType;
-      purchaseSpot(selectedSpace, typeId);
-      buildingMenu.style.display = 'none';
-      delete buildingMenu.dataset.selectedSpace;
-      selectedSpace = null;
-      e.stopPropagation();
     });
   }
 
@@ -493,45 +469,95 @@ function renderPooperList() {
   pooperListContainer.appendChild(fragment);
 }
 
-function getSpotType(typeId) {
-  return spotTypes.find((spot) => spot.id === typeId) ?? null;
+function calculateSpotUpgradeCost(level) {
+  const nextLevel = level + 1;
+  const nextTier = spotTierConfig[nextLevel];
+  if (!nextTier) {
+    return null;
+  }
+
+  const rawCost = typeof nextTier.costCurve === 'function'
+    ? nextTier.costCurve(nextLevel)
+    : nextTier.baseCost;
+
+  if (rawCost == null) {
+    return null;
+  }
+
+  const cost = Math.floor(rawCost);
+  return Number.isFinite(cost) ? Math.max(0, cost) : null;
 }
 
-function purchaseSpot(spaceIndex, typeId) {
-  const index = Number(spaceIndex) - 1;
-  const type = getSpotType(typeId);
-
-  if (Number.isNaN(index) || index < 0 || index >= spots.length) {
-    console.error('Invalid spot index', spaceIndex);
-    return;
+function getSpotTier(level) {
+  if (!spotTierConfig.length) {
+    return null;
   }
 
-  if (!type) {
-    console.error('Unknown spot type', typeId);
-    return;
-  }
+  const clampedIndex = Math.min(Math.max(level, 0), spotTierConfig.length - 1);
+  return spotTierConfig[clampedIndex];
+}
 
-  if (spots[index]) {
-    console.warn(`Spot ${index + 1} already owned.`);
-    return;
-  }
+function recalculateSpotStats(spot) {
+  const tier = getSpotTier(spot.level);
+  spot.multiplier = tier ? tier.multiplier : 1;
+  spot.nextUpgradeCost = calculateSpotUpgradeCost(spot.level);
+}
 
-  if (points < type.cost) {
-    alert('Not enough poop to buy this spot!');
-    return;
-  }
-
-  points -= type.cost;
-  spots[index] = {
-    typeId: type.id,
-    name: type.name,
-    cost: type.cost,
-    capacity: type.capacity,
-    multiplier: type.multiplier,
+function createSpotState(config) {
+  const spot = {
+    id: config.id,
+    name: config.name,
+    unlockAtTotal: config.unlockAtTotal,
+    isUnlocked: totalPoints >= config.unlockAtTotal,
+    level: 0,
+    multiplier: 1,
+    nextUpgradeCost: null,
     occupants: new Set(),
+    capacity: 1,
   };
 
-  updateSpotDisplay(index);
+  recalculateSpotStats(spot);
+  return spot;
+}
+
+function updateSpotUnlocks() {
+  spots.forEach((spot) => {
+    if (!spot.isUnlocked && totalPoints >= spot.unlockAtTotal) {
+      spot.isUnlocked = true;
+    }
+  });
+}
+
+function upgradeSpot(index) {
+  const spot = spots[index];
+  if (!spot) {
+    return;
+  }
+
+  if (!spot.isUnlocked) {
+    return;
+  }
+
+  const cost = spot.nextUpgradeCost;
+  if (cost == null) {
+    return;
+  }
+
+  if (points < cost) {
+    alert('Not enough poop to upgrade this spot!');
+    return;
+  }
+
+  points -= cost;
+  spot.level += 1;
+  recalculateSpotStats(spot);
+
+  poopers.forEach((pooper) => {
+    if (pooper.currentSpotIndex === index) {
+      pooper.activeMultiplier = spot.multiplier;
+    }
+  });
+
   updateUI();
 }
 
@@ -554,35 +580,73 @@ function updateSpotDisplay(index, slotElement) {
   const btn = slot.querySelector('button');
 
   if (!spot) {
-    info.innerHTML = '<strong>Empty Plot</strong><div>Buy a spot to unlock capacity.</div>';
+    return;
+  }
+
+  const tier = getSpotTier(spot.level) || { icon: '', name: 'Spot' };
+
+  if (!spot.isUnlocked) {
+    const baseTier = getSpotTier(0) || tier;
+    info.innerHTML = `
+      <strong>${(baseTier && baseTier.icon) || ''} ${spot.name}</strong>
+      <div class="spot-locked">Locked</div>
+      <div>Unlocks at ${formatNumber(spot.unlockAtTotal)} total poop</div>
+    `;
     if (btn) {
-      btn.textContent = 'Buy';
-      btn.disabled = false;
+      btn.textContent = 'Locked';
+      btn.disabled = true;
     }
     return;
   }
 
+  const nextCost = spot.nextUpgradeCost;
+  const upgradeInfo = nextCost != null
+    ? `<div>Next Upgrade: ${formatNumber(nextCost)}</div>`
+    : '<div>Maxed Out</div>';
+
   info.innerHTML = `
-    <strong>${spot.name}</strong>
-    <div class="spot-capacity">Capacity: ${spot.capacity}</div>
+    <strong>${(tier && tier.icon) || ''} ${spot.name}</strong>
+    <div>Tier: ${tier.name}</div>
+    <div>Level: ${spot.level}</div>
     <div class="spot-occupants">Occupants: ${spot.occupants.size} / ${spot.capacity}</div>
     <div>Multiplier: x${spot.multiplier.toFixed(2)}</div>
+    ${upgradeInfo}
   `;
 
   if (btn) {
-    btn.textContent = 'Owned';
-    btn.disabled = true;
+    if (nextCost == null) {
+      btn.textContent = 'Max Level';
+      btn.disabled = true;
+    } else {
+      btn.textContent = `Upgrade (${formatNumber(nextCost)})`;
+      btn.disabled = points < nextCost;
+    }
   }
 }
 
 function findAvailableSpotIndex() {
+  let bestIndex = null;
+  let bestLevel = -1;
+  let bestMultiplier = 0;
+
   for (let i = 0; i < spots.length; i++) {
     const spot = spots[i];
-    if (spot && spot.occupants.size < spot.capacity) {
-      return i;
+    if (!spot || !spot.isUnlocked) {
+      continue;
+    }
+
+    if (spot.occupants.size >= spot.capacity) {
+      continue;
+    }
+
+    if (spot.level > bestLevel || (spot.level === bestLevel && spot.multiplier > bestMultiplier)) {
+      bestIndex = i;
+      bestLevel = spot.level;
+      bestMultiplier = spot.multiplier;
     }
   }
-  return null;
+
+  return bestIndex;
 }
 
 function requestSpotOccupancy(pooper) {
@@ -592,7 +656,7 @@ function requestSpotOccupancy(pooper) {
   }
 
   const spot = spots[index];
-  if (!spot) {
+  if (!spot || !spot.isUnlocked) {
     return null;
   }
 
@@ -746,16 +810,6 @@ function updateProgressBar(current, max) {
   label.textContent = `${formatNumber(current)} / ${formatNumber(max)}`;
 }
 
-function getUnlockedSpaces() {
-  let thresholdsPassed = 0;
-  for (let i = 0; i < spaceThresholds.length; i++) {
-    if (totalPoints >= spaceThresholds[i]) {
-      thresholdsPassed ++;
-    }
-  }
-  return initialUnlocked + thresholdsPassed;
-}
-
 function getPooperSpotMultiplier(pooper) {
   if (pooper.currentSpotIndex != null) {
     const spot = spots[pooper.currentSpotIndex];
@@ -844,12 +898,8 @@ function getPoopPerSecond() {
 }
 //--------------Update UI function-------------//
 function updateUI() {
-  const unlocked = getUnlockedSpaces();
-  console.log(
-    `TotalPoop=${totalPoints}, thresholds passed=${
-      unlocked - initialUnlocked
-    }, slots unlocked=${unlocked}`
-  );
+  updateSpotUnlocks();
+
   // 1) Poop counter + icon size
   poopAmount.textContent = formatNumber(points);
   const pps = getPoopPerSecond();
@@ -866,34 +916,9 @@ function updateUI() {
 
   const slots = document.querySelectorAll('#spaces-grid .space-item');
   slots.forEach((slot, i) => {
-    const btn = slot.querySelector('button');
-    // 1) Visibility
-    if (i < unlocked) {
-      slot.style.display = 'flex';
-    } else {
-      slot.style.display = 'none';
-      return;  // no need to touch buttons on hidden slots
-    }
-
-    // 2) Lock vs. Buy label
-    if (btn.textContent === 'Locked') {
-      btn.textContent = 'Buy';
-      btn.disabled    = false;
-    }
-
+    slot.style.display = 'flex';
     updateSpotDisplay(i, slot);
   });
-  const buildingMenuEl = document.getElementById('building-menu');
-  if (buildingMenuEl) {
-    const selectedIndex = buildingMenuEl.dataset.selectedSpace
-      ? Number(buildingMenuEl.dataset.selectedSpace)
-      : null;
-    const slotOwned = selectedIndex != null ? Boolean(spots[selectedIndex - 1]) : false;
-    buildingMenuEl.querySelectorAll('button').forEach((button) => {
-      const type = getSpotType(button.dataset.spotType);
-      button.disabled = slotOwned || !type || points < type.cost;
-    });
-  }
   aPoopers.forEach((_, idx) => updatePooperCountDisplay(idx));
   updateProgressBar(totalPoints, 1e15);
   renderUpgrades();
