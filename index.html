@@ -44,11 +44,15 @@
           </div>
         </div>
   
-        <!-- main grid -->
-        <div class="poop-main">
-          <div id="spaces-grid">
-          </div>
-        </div>
+        <!-- Spot strip -->
+        <section
+          id="spot-strip"
+          class="spot-strip"
+          role="list"
+          aria-label="Poop spots"
+        >
+          <!-- dynamically populated -->
+        </section>
         <!-- A.h: side panel -->
         <aside id="poop-side-panel">
           <div id="currencies-panel">
@@ -76,6 +80,17 @@
               aria-selected="false"
             >
               Pooper List
+            </button>
+            <button
+              type="button"
+              class="poop-mobile-tab"
+              data-target="spots-mobile-panel"
+              role="tab"
+              id="poop-mobile-tab-spots"
+              aria-controls="spots-mobile-panel"
+              aria-selected="false"
+            >
+              Spots
             </button>
             <button
               type="button"
@@ -114,6 +129,18 @@
                 </div>
               </section>
             </div>
+            <section
+              id="spots-mobile-panel"
+              class="panel-section"
+              data-mobile-panel
+              role="tabpanel"
+              aria-labelledby="poop-mobile-tab-spots"
+            >
+              <h3 class="panel-heading">Spots</h3>
+              <div id="spot-accordion" class="spot-accordion" role="list">
+                <!-- dynamically populated -->
+              </div>
+            </section>
             <div
               id="upgrades-panel"
               data-mobile-panel
@@ -133,8 +160,6 @@
       <div id="tab-terraform" class="tab-panel hidden"></div>
     </section>
     
-    <!-- Building menu (hidden by default) -->
-    <div id="building-menu" class="hidden"></div>
   </div>
 </body>
 <script src="script.js"></script>
