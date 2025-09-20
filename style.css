@@ -162,7 +162,9 @@ button:hover {
   font-weight: 700;
 }
 #poopPerSecond {
-  font-size: clamp(1.15rem, 4.5vw, 1.75rem);
+  font-size: clamp(1.35rem, 4vw, 2.1rem);
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 #defecatebutton {
   font-size: clamp(1.2rem, 4.5vw, 1.6rem);
@@ -693,9 +695,10 @@ button:hover {
 
 .panel-heading {
   margin: 0;
-  font-size: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: clamp(0.95rem, 2.25vw, 1.05rem);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.015em;
 }
 
 .pooper-row {
