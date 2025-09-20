@@ -230,10 +230,89 @@ button:hover {
   grid-area: poopers;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  border-bottom: 8px solid #4e3629;  /* thick poop-brown bar */
-  padding-bottom: calc(1rem + 8px);  /* shift content over so it’s not on top */
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.poop-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.accordion-item {
+  border: 2px solid rgba(78, 54, 41, 0.35);
+  border-radius: 0.85rem;
+  background: rgba(255, 251, 244, 0.9);
+  box-shadow: 0 16px 28px -24px rgba(78, 54, 41, 0.75);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.accordion-item-open {
+  border-color: #4e3629;
+  box-shadow: 0 18px 36px -24px rgba(78, 54, 41, 0.85);
+}
+
+.accordion-heading {
+  margin: 0;
+}
+
+.accordion-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1.15rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(76, 56, 45, 0.85);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.accordion-trigger::after {
+  content: "▾";
+  font-size: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.accordion-trigger[aria-expanded="true"]::after {
+  transform: rotate(180deg);
+}
+
+.accordion-item-open .accordion-trigger {
+  background: #4e3629;
+}
+
+.accordion-trigger:hover,
+.accordion-trigger:focus-visible {
+  background: #5c443d;
+}
+
+.accordion-trigger:focus-visible {
+  outline: 2px solid #7cb45a;
+  outline-offset: 2px;
+}
+
+.accordion-panel {
+  padding-inline: clamp(0.75rem, 2vw, 1.1rem);
+  padding-block: 0;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.3s ease;
+}
+
+.accordion-panel.accordion-panel-open {
+  opacity: 1;
+  padding-block: clamp(0.75rem, 2vw, 1rem);
+  overflow: visible;
 }
 
 .panel-section {
@@ -348,7 +427,6 @@ button:hover {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
-  margin-bottom: 1rem;
   position: relative;
   overflow: visible;
 }

@@ -262,37 +262,75 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const mobileTabsContainer = document.getElementById('poop-mobile-tabs');
-  const mobilePanelIds = ['pooper-hiring', 'pooper-list-section', 'upgrades-panel'];
-  const mobilePanels = mobilePanelIds
-    .map((panelId) => document.getElementById(panelId))
-    .filter((panel) => panel);
+  const accordionRoot = document.querySelector('[data-accordion-root]');
+  const mobilePanels = Array.from(
+    document.querySelectorAll('#poop-mobile-panels [data-mobile-panel]')
+  );
+  const mobileTabButtons = mobileTabsContainer
+    ? Array.from(mobileTabsContainer.querySelectorAll('.poop-mobile-tab[data-target]'))
+    : [];
+  const accordionButtons = accordionRoot
+    ? Array.from(accordionRoot.querySelectorAll('[data-accordion-target]'))
+    : [];
 
-  if (mobileTabsContainer && mobilePanels.length) {
-    const mobileTabButtons = Array.from(
-      mobileTabsContainer.querySelectorAll('.poop-mobile-tab[data-target]')
-    );
+  if ((mobileTabButtons.length || accordionButtons.length) && mobilePanels.length) {
     const mobileMediaQuery = window.matchMedia('(max-width: 767px)');
+    let activeInfoSectionId = null;
 
-    function showAllMobilePanels() {
-      mobilePanels.forEach((panel) => {
-        panel.classList.remove('mobile-panel-active');
-        panel.removeAttribute('aria-hidden');
-        panel.removeAttribute('hidden');
-        panel.removeAttribute('tabindex');
-      });
-      mobileTabButtons.forEach((button) => {
-        button.classList.remove('active');
-        button.setAttribute('aria-selected', 'false');
+    function updateActivePanelHeight() {
+      if (!activeInfoSectionId) {
+        return;
+      }
+
+      const activePanel = mobilePanels.find((panel) => panel.id === activeInfoSectionId);
+      if (!activePanel) {
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        activePanel.style.maxHeight = `${activePanel.scrollHeight}px`;
       });
     }
 
-    function activateMobilePanel(targetId) {
+    function setActiveInfoSection(targetId) {
+      if (!targetId) {
+        return;
+      }
+
+      const matchingPanel = mobilePanels.find((panel) => panel.id === targetId);
+      if (!matchingPanel) {
+        return;
+      }
+
+      activeInfoSectionId = targetId;
+      const isMobile = mobileMediaQuery.matches;
+
       mobilePanels.forEach((panel) => {
         const isActive = panel.id === targetId;
+        panel.classList.toggle('accordion-panel-open', isActive);
         panel.classList.toggle('mobile-panel-active', isActive);
-        panel.toggleAttribute('hidden', !isActive);
         panel.setAttribute('aria-hidden', String(!isActive));
         panel.setAttribute('tabindex', isActive ? '0' : '-1');
+
+        if (!isActive) {
+          panel.style.maxHeight = '0px';
+        }
+
+        if (isMobile && !isActive) {
+          panel.setAttribute('hidden', '');
+        } else {
+          panel.removeAttribute('hidden');
+        }
+
+        const parentItem = panel.closest('.accordion-item');
+        if (parentItem) {
+          parentItem.classList.toggle('accordion-item-open', isActive);
+        }
+      });
+
+      accordionButtons.forEach((button) => {
+        const isActive = button.dataset.accordionTarget === targetId;
+        button.setAttribute('aria-expanded', String(isActive));
       });
 
       mobileTabButtons.forEach((button) => {
@@ -300,46 +338,63 @@ document.addEventListener('DOMContentLoaded', () => {
         button.classList.toggle('active', isActive);
         button.setAttribute('aria-selected', String(isActive));
       });
+
+      updateActivePanelHeight();
     }
 
-    function syncMobilePanelsForViewport() {
-      if (!mobileMediaQuery.matches) {
-        showAllMobilePanels();
-        return;
-      }
+    const initiallyExpandedButton = accordionButtons.find(
+      (button) => button.getAttribute('aria-expanded') === 'true'
+    );
+    const initiallyActiveTab = mobileTabButtons.find((button) => button.classList.contains('active'));
 
-      let activeButton = mobileTabButtons.find((button) => button.classList.contains('active'));
-      if (!activeButton && mobileTabButtons.length > 0) {
-        activeButton = mobileTabButtons[0];
-        activeButton.classList.add('active');
-      }
-
-      if (activeButton) {
-        activateMobilePanel(activeButton.dataset.target);
-      }
+    if (initiallyExpandedButton) {
+      activeInfoSectionId = initiallyExpandedButton.dataset.accordionTarget;
+    } else if (initiallyActiveTab) {
+      activeInfoSectionId = initiallyActiveTab.dataset.target;
+    } else if (mobilePanels.length) {
+      activeInfoSectionId = mobilePanels[0].id;
     }
 
-    mobileTabButtons.forEach((button) => {
+    if (activeInfoSectionId) {
+      setActiveInfoSection(activeInfoSectionId);
+    }
+
+    accordionButtons.forEach((button) => {
       button.addEventListener('click', () => {
-        if (!mobileMediaQuery.matches) {
+        const targetId = button.dataset.accordionTarget;
+        if (!targetId) {
           return;
         }
-
-        if (button.classList.contains('active')) {
-          return;
-        }
-
-        activateMobilePanel(button.dataset.target);
+        setActiveInfoSection(targetId);
       });
     });
 
+    mobileTabButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const targetId = button.dataset.target;
+        if (!targetId) {
+          return;
+        }
+        setActiveInfoSection(targetId);
+      });
+    });
+
+    const handleViewportChange = () => {
+      if (!activeInfoSectionId && mobilePanels.length) {
+        activeInfoSectionId = mobilePanels[0].id;
+      }
+      if (activeInfoSectionId) {
+        setActiveInfoSection(activeInfoSectionId);
+      }
+    };
+
     if (typeof mobileMediaQuery.addEventListener === 'function') {
-      mobileMediaQuery.addEventListener('change', syncMobilePanelsForViewport);
+      mobileMediaQuery.addEventListener('change', handleViewportChange);
     } else if (typeof mobileMediaQuery.addListener === 'function') {
-      mobileMediaQuery.addListener(syncMobilePanelsForViewport);
+      mobileMediaQuery.addListener(handleViewportChange);
     }
 
-    syncMobilePanelsForViewport();
+    window.addEventListener('resize', updateActivePanelHeight);
   }
 
   updateUI();
