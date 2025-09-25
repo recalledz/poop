@@ -1,9 +1,31 @@
 // script.js
 
+// ─── Tunable baseline numbers ─────────────────────────
+const INITIAL_POOP_PER_CLICK = 2;
+const BASE_POOPER_OUTPUT = 18;
+const INITIAL_POOPER_COST = 350;
+const POOPER_COST_RAMP = 1.18;
+const FIRST_TIER_MULTIPLIER = 1.6;
+const UPGRADE_COST_RAMP = 1.22;
+const SPOT_UPGRADE_BASE_COSTS = [
+  0,
+  650,
+  1800,
+  4200,
+  9000,
+];
+const SECOND_SPOT_UNLOCK_TOTAL = 4200;
+
+const MVP_TARGET = {
+  type: "totalPoop",
+  threshold: 5000,
+  label: "Reach 5,000 total poop",
+};
+
 // ─── State ─────────────────────────────────────────────
 let points = 0;
 let totalPoints = 0;
-let poopPerClick = 100;
+let poopPerClick = INITIAL_POOP_PER_CLICK;
 let passivePoopPerSecond = 0;
 
 function createCostCurve(baseCost, growthRate, levelOffset) {
@@ -22,47 +44,49 @@ const spotTierConfig = [
     id: "bucket-brigade",
     name: "Bucket Brigade",
     icon: "🪣",
-    multiplier: 1.35,
-    costCurve: createCostCurve(350, 1.25, 1),
+    multiplier: FIRST_TIER_MULTIPLIER,
+    costCurve: createCostCurve(SPOT_UPGRADE_BASE_COSTS[1], UPGRADE_COST_RAMP, 1),
   },
   {
     id: "porcelain-palace",
     name: "Porcelain Palace",
     icon: "🚽",
-    multiplier: 1.75,
-    costCurve: createCostCurve(1200, 1.3, 2),
+    multiplier: 1.95,
+    costCurve: createCostCurve(SPOT_UPGRADE_BASE_COSTS[2], UPGRADE_COST_RAMP, 2),
   },
   {
     id: "spa-suite",
     name: "Spa Suite",
     icon: "🧖",
-    multiplier: 2.2,
-    costCurve: createCostCurve(3200, 1.4, 3),
+    multiplier: 2.4,
+    costCurve: createCostCurve(SPOT_UPGRADE_BASE_COSTS[3], UPGRADE_COST_RAMP, 3),
   },
   {
     id: "galactic-gazebo",
     name: "Galactic Gazebo",
     icon: "🪐",
-    multiplier: 3,
-    costCurve: createCostCurve(7600, 1.5, 4),
+    multiplier: 3.1,
+    costCurve: createCostCurve(SPOT_UPGRADE_BASE_COSTS[4], UPGRADE_COST_RAMP, 4),
   },
 ];
 
 const spotRoster = [
   { id: "rustic-hollow", name: "Rustic Hollow", unlockAtTotal: 0 },
   { id: "garden-nook", name: "Garden Nook", unlockAtTotal: 0 },
-  { id: "skyline-suite", name: "Skyline Suite", unlockAtTotal: 2500 },
+  { id: "skyline-suite", name: "Skyline Suite", unlockAtTotal: SECOND_SPOT_UNLOCK_TOTAL },
 ];
 
 const spots = spotRoster.map(createSpotState);
 const spotViews = [];
-let averagePooperCost = 10;
+let averagePooperCost = INITIAL_POOPER_COST;
 const aPoopers = [
-  { name: "Average Pooper", rate: 1 }  // rate = poop/sec
+  { name: "Average Pooper", rate: BASE_POOPER_OUTPUT }  // base output per cycle
 ];
 
 let poopers = [];
 let nextPooperId = 1;
+
+let hasShownMvpWin = false;
 
 const STATE_IDLE = "idle";
 const STATE_EATING = "eating";
@@ -165,6 +189,10 @@ const maxPoopForIconSize = 300000; // cap growth at 300k poop
 const defecateButton     = document.getElementById("defecatebutton");
 const poopPerSecondDisplay = document.getElementById("poopPerSecond");
 const upgradesPanel      = document.getElementById("upgrades-panel");
+const winModal           = document.getElementById("win-modal");
+const winModalMessage    = document.getElementById("win-modal-message");
+const winDismissButton   = document.getElementById("win-dismiss-button");
+const winReplayButton    = document.getElementById("win-replay-button");
 
 let pooperListContainer = null;
 
@@ -312,6 +340,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   updateUI();
+  if (winDismissButton) {
+    winDismissButton.addEventListener('click', () => {
+      hideWinModal();
+    });
+  }
+
+  if (winReplayButton) {
+    winReplayButton.addEventListener('click', () => {
+      hideWinModal();
+      window.location.reload();
+    });
+  }
 });
 
 // ─── functions ─────────────────────────────────────────
@@ -815,6 +855,8 @@ function upgradeSpot(index) {
   points -= cost;
   spot.level += 1;
   recalculateSpotStats(spot);
+
+  checkForMvpWin();
 
   poopers.forEach((pooper) => {
     if (pooper.currentSpotIndex === index) {
@@ -1364,8 +1406,7 @@ function updateUI() {
 
 // Manual click
 defecateButton.addEventListener("click", () => {
-  points += poopPerClick;
-  totalPoints += poopPerClick;
+  addPoop(poopPerClick);
   updateUI();
 });
 
@@ -1379,7 +1420,7 @@ function buyPooper(idx) {
 
   // 2) pay & raise future cost
   points -= averagePooperCost;
-  averagePooperCost = Math.ceil(averagePooperCost * 1.1);
+  averagePooperCost = Math.ceil(averagePooperCost * POOPER_COST_RAMP);
 
   // 3) create a new pooper and store it
   const template = aPoopers[idx];
@@ -1434,8 +1475,7 @@ function tickPooper(pooper, deltaMs) {
     if (pooper.stateTimer <= 0) {
       const reward = calculatePooperCompletionReward(pooper);
       if (reward > 0) {
-        points += reward;
-        totalPoints += reward;
+        addPoop(reward);
       }
       advancePooperState(pooper);
     }
@@ -1530,9 +1570,89 @@ setInterval(() => {
 
   if (passivePoopPerSecond > 0) {
     const passiveGain = passivePoopPerSecond * (TICK_INTERVAL_MS / 1000);
-    points += passiveGain;
-    totalPoints += passiveGain;
+    addPoop(passiveGain);
   }
 
   updateUI();
 }, TICK_INTERVAL_MS);
+
+function describeMvpTarget(target) {
+  if (!target) {
+    return "the MVP goal";
+  }
+
+  if (typeof target.label === "string" && target.label.trim().length > 0) {
+    return target.label;
+  }
+
+  switch (target.type) {
+    case "totalPoop":
+      return `Reach ${formatNumber(target.threshold)} total poop`;
+    case "spotLevel":
+      return `Level up spot #${(target.spotIndex ?? 0) + 1} to ${target.targetLevel ?? 1}`;
+    default:
+      return "the MVP goal";
+  }
+}
+
+function isMvpTargetMet() {
+  if (!MVP_TARGET) {
+    return false;
+  }
+
+  switch (MVP_TARGET.type) {
+    case "totalPoop":
+      return totalPoints >= (MVP_TARGET.threshold ?? 0);
+    case "spotLevel": {
+      const index = MVP_TARGET.spotIndex ?? 0;
+      const spot = spots[index];
+      return !!spot && spot.level >= (MVP_TARGET.targetLevel ?? 1);
+    }
+    default:
+      return false;
+  }
+}
+
+function showWinModal() {
+  if (!winModal) {
+    return;
+  }
+
+  const description = describeMvpTarget(MVP_TARGET);
+  if (winModalMessage) {
+    winModalMessage.textContent = `You hit the MVP target: ${description}!`;
+  }
+
+  winModal.hidden = false;
+  winModal.classList.add("is-visible");
+}
+
+function hideWinModal() {
+  if (!winModal) {
+    return;
+  }
+
+  winModal.classList.remove("is-visible");
+  winModal.hidden = true;
+}
+
+function checkForMvpWin() {
+  if (hasShownMvpWin) {
+    return;
+  }
+
+  if (isMvpTargetMet()) {
+    hasShownMvpWin = true;
+    showWinModal();
+  }
+}
+
+function addPoop(amount) {
+  if (!(amount > 0)) {
+    return;
+  }
+
+  points += amount;
+  totalPoints += amount;
+  checkForMvpWin();
+}
