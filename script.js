@@ -393,6 +393,45 @@ function getPooperProgressInfo(pooper) {
   return { percent: 0, text: '' };
 }
 
+function getSpotTargetLabel(index) {
+  if (index == null) {
+    return null;
+  }
+
+  const spot = spots[index];
+  const level = spot ? spot.level : 0;
+  return `Spot #${index + 1} (Lv ${level})`;
+}
+
+function getPooperDetailText(pooper) {
+  const state = pooper.state;
+  const stateLabel = getPooperStateLabel(state);
+
+  if (state === STATE_POOPING) {
+    const activeIndex =
+      pooper.currentSpotIndex != null
+        ? pooper.currentSpotIndex
+        : pooper.targetSpotIndex;
+    const targetLabel = getSpotTargetLabel(activeIndex);
+    return targetLabel ? `Pooping @ ${targetLabel}` : stateLabel;
+  }
+
+  if (state === STATE_LOOKING_FOR_SPOT || state === STATE_WAITING_FOR_SPOT) {
+    const targetLabel = getSpotTargetLabel(pooper.targetSpotIndex);
+    if (targetLabel) {
+      return `Target: ${targetLabel}`;
+    }
+
+    if (state === STATE_WAITING_FOR_SPOT) {
+      return 'Waiting for Spot';
+    }
+
+    return stateLabel;
+  }
+
+  return stateLabel;
+}
+
 function renderPooperList() {
   if (!pooperListContainer) {
     return;
@@ -426,6 +465,10 @@ function renderPooperList() {
 
     header.append(nameEl, stateEl);
 
+    const detail = document.createElement('div');
+    detail.className = 'pooper-detail';
+    detail.textContent = getPooperDetailText(pooper);
+
     const progressWrapper = document.createElement('div');
     progressWrapper.className = 'pooper-progress-wrapper';
 
@@ -454,7 +497,7 @@ function renderPooperList() {
       progressWrapper.appendChild(progressLabel);
     }
 
-    card.append(header, progressWrapper);
+    card.append(header, detail, progressWrapper);
     fragment.appendChild(card);
   });
 
@@ -506,6 +549,7 @@ function createSpotState(config) {
     multiplier: 1,
     nextUpgradeCost: null,
     occupants: new Set(),
+    waiting: new Set(),
     capacity: 1,
   };
 
@@ -702,12 +746,17 @@ function createSpotTooltipMarkup(spot, tier, nextTier) {
   const upgradeCostLabel = spot.nextUpgradeCost != null
     ? formatNumber(spot.nextUpgradeCost)
     : '—';
+  const waitingCount = spot.waiting?.size ?? 0;
+  const occupancyCount = spot.occupants.size;
+  const occupancyLabel = waitingCount > 0
+    ? `${occupancyCount} / ${spot.capacity} (+${waitingCount} waiting)`
+    : `${occupancyCount} / ${spot.capacity}`;
 
   return `
     <dl class="spot-tooltip-list">
       <div class="spot-tooltip-row"><dt>Tier</dt><dd>${unlocked ? tier.name : 'Locked'}</dd></div>
       <div class="spot-tooltip-row"><dt>Capacity</dt><dd>${capacityLabel}</dd></div>
-      <div class="spot-tooltip-row"><dt>Occupancy</dt><dd>${spot.occupants.size} / ${spot.capacity}</dd></div>
+      <div class="spot-tooltip-row"><dt>Occupancy</dt><dd>${occupancyLabel}</dd></div>
       <div class="spot-tooltip-row"><dt>Bonus</dt><dd>${bonusLabel}</dd></div>
       <div class="spot-tooltip-row"><dt>Next Tier</dt><dd>${nextLabel}</dd></div>
       <div class="spot-tooltip-row"><dt>Upgrade Cost</dt><dd>${upgradeCostLabel}</dd></div>
@@ -826,15 +875,23 @@ function updateSpotDisplay(index) {
         : 'Locked';
     }
 
-    if (occupancyFill) {
+    if (occupancyFill || occupancyText) {
+      const waitingCount = spot.waiting?.size ?? 0;
+      const occupantCount = spot.occupants.size;
+      const totalAssigned = occupantCount + waitingCount;
       const ratio = spot.capacity > 0
-        ? Math.min(1, spot.occupants.size / spot.capacity)
+        ? Math.min(1, totalAssigned / spot.capacity)
         : 0;
-      occupancyFill.style.width = `${ratio * 100}%`;
-    }
 
-    if (occupancyText) {
-      occupancyText.textContent = `Occupancy: ${spot.occupants.size} / ${spot.capacity}`;
+      if (occupancyFill) {
+        occupancyFill.style.width = `${ratio * 100}%`;
+      }
+
+      if (occupancyText) {
+        occupancyText.textContent = waitingCount > 0
+          ? `Occupancy: ${totalAssigned} / ${spot.capacity} (${waitingCount} waiting)`
+          : `Occupancy: ${totalAssigned} / ${spot.capacity}`;
+      }
     }
 
     updateSpotUpgradeButton(upgradeButton, spot);
@@ -886,7 +943,12 @@ function updateSpotDisplay(index) {
     }
 
     if (occupancy) {
-      occupancy.textContent = `Occupancy: ${spot.occupants.size} / ${spot.capacity}`;
+      const waitingCount = spot.waiting?.size ?? 0;
+      const occupantCount = spot.occupants.size;
+      const totalAssigned = occupantCount + waitingCount;
+      occupancy.textContent = waitingCount > 0
+        ? `Occupancy: ${totalAssigned} / ${spot.capacity} (${waitingCount} waiting)`
+        : `Occupancy: ${totalAssigned} / ${spot.capacity}`;
     }
 
     if (tooltip) {
@@ -940,57 +1002,142 @@ function findAvailableSpotIndex() {
   return bestIndex;
 }
 
-function requestSpotOccupancy(pooper) {
-  const index = findAvailableSpotIndex();
-  if (index == null) {
-    return null;
+function findPreferredSpotIndex() {
+  let bestIndex = null;
+  let bestLevel = -1;
+  let bestMultiplier = 0;
+
+  for (let i = 0; i < spots.length; i++) {
+    const spot = spots[i];
+    if (!spot || !spot.isUnlocked) {
+      continue;
+    }
+
+    if (spot.level > bestLevel || (spot.level === bestLevel && spot.multiplier > bestMultiplier)) {
+      bestIndex = i;
+      bestLevel = spot.level;
+      bestMultiplier = spot.multiplier;
+    }
   }
 
-  const spot = spots[index];
-  if (!spot || !spot.isUnlocked) {
-    return null;
-  }
-
-  if (spot.occupants.has(pooper.id)) {
-    return index;
-  }
-
-  if (spot.occupants.size >= spot.capacity) {
-    return null;
-  }
-
-  spot.occupants.add(pooper.id);
-  pooper.currentSpotIndex = index;
-  pooper.activeMultiplier = spot.multiplier;
-  updateSpotDisplay(index);
-  return index;
+  return bestIndex;
 }
 
-function releaseSpotOccupancy(pooper) {
-  if (pooper.currentSpotIndex == null) {
-    pooper.activeMultiplier = 1;
+function detachPooperFromSpot(pooper, index) {
+  const spot = spots[index];
+  if (!spot) {
     return;
   }
 
-  const spot = spots[pooper.currentSpotIndex];
-  if (spot) {
-    spot.occupants.delete(pooper.id);
-    updateSpotDisplay(pooper.currentSpotIndex);
+  const removedOccupant = spot.occupants.delete(pooper.id);
+  const removedWaiting = spot.waiting?.delete(pooper.id);
+
+  if (removedOccupant || removedWaiting) {
+    updateSpotDisplay(index);
+  }
+}
+
+function clearPooperSpotAssociations(pooper) {
+  const indices = new Set();
+  if (pooper.targetSpotIndex != null) {
+    indices.add(pooper.targetSpotIndex);
+  }
+  if (pooper.currentSpotIndex != null) {
+    indices.add(pooper.currentSpotIndex);
   }
 
+  indices.forEach((index) => detachPooperFromSpot(pooper, index));
+
+  pooper.targetSpotIndex = null;
   pooper.currentSpotIndex = null;
   pooper.activeMultiplier = 1;
 }
 
-function attemptToOccupySpot(pooper) {
-  const index = requestSpotOccupancy(pooper);
-  if (index == null) {
-    setPooperState(pooper, STATE_WAITING_FOR_SPOT);
+function assignPooperToSpot(pooper, spotIndex, { waiting = false } = {}) {
+  if (spotIndex == null) {
+    clearPooperSpotAssociations(pooper);
+    return null;
+  }
+
+  const spot = spots[spotIndex];
+  if (!spot || !spot.isUnlocked) {
+    clearPooperSpotAssociations(pooper);
+    return null;
+  }
+
+  if (pooper.targetSpotIndex != null && pooper.targetSpotIndex !== spotIndex) {
+    detachPooperFromSpot(pooper, pooper.targetSpotIndex);
+  }
+
+  if (pooper.currentSpotIndex != null && pooper.currentSpotIndex !== spotIndex) {
+    detachPooperFromSpot(pooper, pooper.currentSpotIndex);
+  }
+
+  pooper.targetSpotIndex = spotIndex;
+
+  if (waiting) {
+    if (spot.occupants.has(pooper.id)) {
+      spot.occupants.delete(pooper.id);
+    }
+    if (!spot.waiting.has(pooper.id)) {
+      spot.waiting.add(pooper.id);
+    }
+    updateSpotDisplay(spotIndex);
+    pooper.currentSpotIndex = null;
+    pooper.activeMultiplier = 1;
+    return spotIndex;
+  }
+
+  if (spot.waiting.delete(pooper.id)) {
+    updateSpotDisplay(spotIndex);
+  }
+
+  if (!spot.occupants.has(pooper.id)) {
+    if (spot.occupants.size >= spot.capacity) {
+      spot.waiting.add(pooper.id);
+      updateSpotDisplay(spotIndex);
+      pooper.currentSpotIndex = null;
+      pooper.activeMultiplier = 1;
+      return null;
+    }
+
+    spot.occupants.add(pooper.id);
+    updateSpotDisplay(spotIndex);
+  }
+
+  pooper.currentSpotIndex = spotIndex;
+  pooper.activeMultiplier = spot.multiplier;
+  return spotIndex;
+}
+
+function releaseSpotOccupancy(pooper) {
+  if (pooper.targetSpotIndex == null && pooper.currentSpotIndex == null) {
+    pooper.activeMultiplier = 1;
     return;
   }
 
-  pooper.state = STATE_POOPING;
-  pooper.stateTimer = POOPER_STATE_DURATIONS[STATE_POOPING];
+  clearPooperSpotAssociations(pooper);
+}
+
+function attemptToOccupySpot(pooper) {
+  const availableIndex = findAvailableSpotIndex();
+  if (availableIndex != null) {
+    const assignedIndex = assignPooperToSpot(pooper, availableIndex);
+    if (assignedIndex != null) {
+      pooper.state = STATE_POOPING;
+      pooper.stateTimer = POOPER_STATE_DURATIONS[STATE_POOPING];
+      return;
+    }
+  }
+
+  const preferredIndex = findPreferredSpotIndex();
+  if (preferredIndex != null) {
+    assignPooperToSpot(pooper, preferredIndex, { waiting: true });
+  } else {
+    clearPooperSpotAssociations(pooper);
+  }
+
+  setPooperState(pooper, STATE_WAITING_FOR_SPOT);
 }
 
 function renderUpgrades() {
@@ -1242,6 +1389,7 @@ function buyPooper(idx) {
     state: STATE_IDLE,
     stateTimer: 0,
     progress: 0,
+    targetSpotIndex: null,
     currentSpotIndex: null,
     activeMultiplier: 1,
     baseOutput: template.rate,
@@ -1341,7 +1489,30 @@ function setPooperState(pooper, nextState) {
       pooper.stateTimer = POOPER_STATE_DURATIONS[STATE_WAITING_FOR_SPOT];
       break;
     case STATE_POOPING:
-      pooper.stateTimer = POOPER_STATE_DURATIONS[STATE_POOPING];
+      {
+        let targetIndex =
+          pooper.targetSpotIndex != null
+            ? pooper.targetSpotIndex
+            : pooper.currentSpotIndex;
+
+        if (targetIndex == null) {
+          const available = findAvailableSpotIndex();
+          if (available != null) {
+            targetIndex = available;
+          }
+        }
+
+        const assignedIndex = targetIndex != null
+          ? assignPooperToSpot(pooper, targetIndex)
+          : null;
+
+        if (assignedIndex == null) {
+          setPooperState(pooper, STATE_WAITING_FOR_SPOT);
+          return;
+        }
+
+        pooper.stateTimer = POOPER_STATE_DURATIONS[STATE_POOPING];
+      }
       break;
     case STATE_RESTING:
       pooper.stateTimer = POOPER_STATE_DURATIONS[STATE_RESTING];
