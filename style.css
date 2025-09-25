@@ -768,6 +768,12 @@ button:hover {
   letter-spacing: 0.05em;
 }
 
+.pooper-detail {
+  font-size: 0.8rem;
+  color: #3b2a25;
+  opacity: 0.85;
+}
+
 .pooper-progress-wrapper {
   display: flex;
   flex-direction: column;
